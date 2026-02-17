@@ -33,8 +33,9 @@ static float config_scroll_vertical_exponent[LAYERS_NUM] = {0};
 static float config_scroll_vertical_divisor[LAYERS_NUM] = {0};
 static float config_scroll_horizontal_exponent[LAYERS_NUM] = {0};
 static float config_scroll_horizontal_divisor[LAYERS_NUM] = {0};
-static int config_scroll_vertical_denominator[LAYERS_NUM] = {0};
-static int config_scroll_horizontal_denominator[LAYERS_NUM] = {0};
+/* Scroll denominator is derived from divisor: divisor/50 so that one speed setting
+   controls both sensitivity and "ticks per step" (filters accidental single touches). */
+#define SCROLL_DIVISOR_TO_DENOMINATOR(divisor)  ((int)((divisor) / 50.0f) > 0 ? (int)((divisor) / 50.0f) : 1)
 
 // Trackball configuration parameters for the current layer
 static float acceleration_exponent;
@@ -290,12 +291,12 @@ void trackball_load_layer_config(void)
 
     LOAD_CONFIG(acceleration_exponent, 1.2f);
     LOAD_CONFIG(acceleration_divisor, 80);
-    LOAD_CONFIG(scroll_vertical_denominator, 2);
     LOAD_CONFIG(scroll_vertical_exponent, 1.30f);
     LOAD_CONFIG(scroll_vertical_divisor, 100.0f);
-    LOAD_CONFIG(scroll_horizontal_denominator, 3);
+    scroll_vertical_denominator = SCROLL_DIVISOR_TO_DENOMINATOR(scroll_vertical_divisor);
     LOAD_CONFIG(scroll_horizontal_exponent, 1.20f);
     LOAD_CONFIG(scroll_horizontal_divisor, 200.0f);
+    scroll_horizontal_denominator = SCROLL_DIVISOR_TO_DENOMINATOR(scroll_horizontal_divisor);
 
     #undef LOAD_CONFIG
 }
@@ -307,13 +308,7 @@ void trackball_set_acceleration(uint8_t layer, float value)
 
 void trackball_set_speed(uint8_t layer, float value)
 {
-    // 125 -> 80
     config_acceleration_divisor[layer] = 10000.0f / value;
-}
-
-void trackball_set_scroll_vertical_denominator(uint8_t layer, int denominator)
-{
-    config_scroll_vertical_denominator[layer] = denominator;
 }
 
 void trackball_set_scroll_vertical_acceleration(uint8_t layer, float value)
@@ -326,11 +321,6 @@ void trackball_set_scroll_vertical_speed(uint8_t layer, float value)
     config_scroll_vertical_divisor[layer] = 10000.0f / value;
 }
 
-void trackball_set_scroll_horizontal_denominator(uint8_t layer, int denominator)
-{
-    config_scroll_horizontal_denominator[layer] = denominator;
-}
-    
 void trackball_set_scroll_horizontal_acceleration(uint8_t layer, float value)
 {
     config_scroll_horizontal_exponent[layer] = 1.0f + value;
