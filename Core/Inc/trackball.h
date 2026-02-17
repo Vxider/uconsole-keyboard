@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include "main.h"
 
+#define DEFAULT_TRACKBALL_SPEED 50
+#define DEFAULT_TRACKBALL_ACCELERATION 0.3f
+#define DEFAULT_TRACKBALL_SCROLL_VERTICAL_SPEED 100
+#define DEFAULT_TRACKBALL_SCROLL_VERTICAL_ACCELERATION 0.3f
+#define DEFAULT_TRACKBALL_SCROLL_HORIZONTAL_SPEED 100
+#define DEFAULT_TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION 0.3f
+
 void trackball_init(void);
 void trackball_task(void);
 void trackball_interrupt_x_neg(void);

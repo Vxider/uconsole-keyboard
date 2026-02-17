@@ -24,6 +24,10 @@ static RateMeter wheelRate[AXIS_NUM];
 static Glider glider[AXIS_NUM];
 #else
 static float directError[AXIS_NUM];
+static float directSpeed[AXIS_NUM];
+static int8_t directDirection[AXIS_NUM];
+static uint16_t directIdle[AXIS_NUM]; /* ms since last encoder tick */
+#define DIRECT_STOP_MS 50             /* stop after this many ms without ticks */
 #endif
 static int16_t wheelBuffer;   /* Accumulates encoder ticks; int16_t to avoid overflow */
 static int16_t hWheelBuffer;  /* Horizontal wheel buffer */
@@ -93,16 +97,22 @@ void trackball_interrupt_x_neg(void)
         ratemeter_onInterrupt(&wheelRate[AXIS_X]);
     } else {
         ratemeter_onInterrupt(&rateMeter[AXIS_X]);
-#if GLIDER_ENABLED
-        glider_setDirection(&glider[AXIS_X], -1);
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
         const float ratio = rateToVelocityCurve(rate) / (rate > 0.001f ? rate : 1.0f);
         const float vx = rx * ratio;
         const float vy = ry * ratio;
+#if GLIDER_ENABLED
+        glider_setDirection(&glider[AXIS_X], -1);
         glider_update(&glider[AXIS_X], vx, glider_sustain_from_speed(vx));
         glider_updateSpeed(&glider[AXIS_Y], vy);
+#else
+        directDirection[AXIS_X] = -1;
+        directSpeed[AXIS_X] = vx;
+        directSpeed[AXIS_Y] = vy;
+        directIdle[AXIS_X] = 0;
+        directIdle[AXIS_Y] = 0;
 #endif
     }
     __enable_irq();
@@ -116,16 +126,22 @@ void trackball_interrupt_x_pos(void)
         ratemeter_onInterrupt(&wheelRate[AXIS_X]);
     } else {
         ratemeter_onInterrupt(&rateMeter[AXIS_X]);
-#if GLIDER_ENABLED
-        glider_setDirection(&glider[AXIS_X], 1);
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
         const float ratio = rateToVelocityCurve(rate) / (rate > 0.001f ? rate : 1.0f);
         const float vx = rx * ratio;
         const float vy = ry * ratio;
+#if GLIDER_ENABLED
+        glider_setDirection(&glider[AXIS_X], 1);
         glider_update(&glider[AXIS_X], vx, glider_sustain_from_speed(vx));
         glider_updateSpeed(&glider[AXIS_Y], vy);
+#else
+        directDirection[AXIS_X] = 1;
+        directSpeed[AXIS_X] = vx;
+        directSpeed[AXIS_Y] = vy;
+        directIdle[AXIS_X] = 0;
+        directIdle[AXIS_Y] = 0;
 #endif
     }
     __enable_irq();
@@ -139,16 +155,22 @@ void trackball_interrupt_y_neg(void)
         ratemeter_onInterrupt(&wheelRate[AXIS_Y]);
     } else {
         ratemeter_onInterrupt(&rateMeter[AXIS_Y]);
-#if GLIDER_ENABLED
-        glider_setDirection(&glider[AXIS_Y], -1);
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
         const float ratio = rateToVelocityCurve(rate) / (rate > 0.001f ? rate : 1.0f);
         const float vx = rx * ratio;
         const float vy = ry * ratio;
+#if GLIDER_ENABLED
+        glider_setDirection(&glider[AXIS_Y], -1);
         glider_updateSpeed(&glider[AXIS_X], vx);
         glider_update(&glider[AXIS_Y], vy, glider_sustain_from_speed(vy));
+#else
+        directDirection[AXIS_Y] = -1;
+        directSpeed[AXIS_X] = vx;
+        directSpeed[AXIS_Y] = vy;
+        directIdle[AXIS_X] = 0;
+        directIdle[AXIS_Y] = 0;
 #endif
     }
     __enable_irq();
@@ -162,16 +184,22 @@ void trackball_interrupt_y_pos(void)
         ratemeter_onInterrupt(&wheelRate[AXIS_Y]);
     } else {
         ratemeter_onInterrupt(&rateMeter[AXIS_Y]);
-#if GLIDER_ENABLED
-        glider_setDirection(&glider[AXIS_Y], 1);
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
         const float ratio = rateToVelocityCurve(rate) / (rate > 0.001f ? rate : 1.0f);
         const float vx = rx * ratio;
         const float vy = ry * ratio;
+#if GLIDER_ENABLED
+        glider_setDirection(&glider[AXIS_Y], 1);
         glider_updateSpeed(&glider[AXIS_X], vx);
         glider_update(&glider[AXIS_Y], vy, glider_sustain_from_speed(vy));
+#else
+        directDirection[AXIS_Y] = 1;
+        directSpeed[AXIS_X] = vx;
+        directSpeed[AXIS_Y] = vy;
+        directIdle[AXIS_X] = 0;
+        directIdle[AXIS_Y] = 0;
 #endif
     }
     __enable_irq();
@@ -272,15 +300,20 @@ void trackball_task(void)
             glider_stop(&glider[AXIS_Y]);
         }
 #else
-        /* Direct mode: 1 encoder tick = at least 1 pixel, acceleration adds on top.
-           factor = 1 + rateToVelocityCurve(rate), so slow = 1:1, fast = amplified. */
-        const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
-        const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
-        const float rate = hypot_f(rx, ry);
-        const float factor = 1.0f + rateToVelocityCurve(rate);
+        /* Direct mode: speed & direction are set in interrupts (fresh rate).
+           Idle timer counts ms without ticks; stop after DIRECT_STOP_MS. */
+        for (int a = 0; a < AXIS_NUM; a++) {
+            uint16_t newIdle = directIdle[a] + delta;
+            if (newIdle > DIRECT_STOP_MS) newIdle = DIRECT_STOP_MS;
+            directIdle[a] = newIdle;
+            if (directIdle[a] >= DIRECT_STOP_MS) {
+                directSpeed[a] = 0;
+                directError[a] = 0;
+            }
+        }
 
-        directError[AXIS_X] += (float)distances[AXIS_X] * factor;
-        directError[AXIS_Y] += (float)distances[AXIS_Y] * factor;
+        directError[AXIS_X] += (float)directDirection[AXIS_X] * directSpeed[AXIS_X] * (float)delta;
+        directError[AXIS_Y] += (float)directDirection[AXIS_Y] * directSpeed[AXIS_Y] * (float)delta;
 
         x = (int8_t)clamp_int8((int32_t)directError[AXIS_X]);
         y = (int8_t)clamp_int8((int32_t)directError[AXIS_Y]);
@@ -320,13 +353,13 @@ void trackball_load_layer_config(void)
         } \
         if (!name) name = default_value;
 
-    LOAD_CONFIG(acceleration_exponent, 1.2f);
-    LOAD_CONFIG(acceleration_divisor, 80);
-    LOAD_CONFIG(scroll_vertical_exponent, 1.30f);
-    LOAD_CONFIG(scroll_vertical_divisor, 100.0f);
+    LOAD_CONFIG(acceleration_exponent, 1.0f + DEFAULT_TRACKBALL_ACCELERATION);
+    LOAD_CONFIG(acceleration_divisor, 10000.0f / DEFAULT_TRACKBALL_SPEED);
+    LOAD_CONFIG(scroll_vertical_exponent, 1.0f + DEFAULT_TRACKBALL_SCROLL_VERTICAL_ACCELERATION);
+    LOAD_CONFIG(scroll_vertical_divisor, 10000.0f / DEFAULT_TRACKBALL_SCROLL_VERTICAL_SPEED);
     scroll_vertical_denominator = SCROLL_DIVISOR_TO_DENOMINATOR(scroll_vertical_divisor);
-    LOAD_CONFIG(scroll_horizontal_exponent, 1.20f);
-    LOAD_CONFIG(scroll_horizontal_divisor, 200.0f);
+    LOAD_CONFIG(scroll_horizontal_exponent, 1.0f + DEFAULT_TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION);
+    LOAD_CONFIG(scroll_horizontal_divisor, 10000.0f / DEFAULT_TRACKBALL_SCROLL_HORIZONTAL_SPEED);
     scroll_horizontal_denominator = SCROLL_DIVISOR_TO_DENOMINATOR(scroll_horizontal_divisor);
 
     #undef LOAD_CONFIG
@@ -375,6 +408,12 @@ void trackball_init(void)
 #else
     directError[AXIS_X] = 0;
     directError[AXIS_Y] = 0;
+    directSpeed[AXIS_X] = 0;
+    directSpeed[AXIS_Y] = 0;
+    directDirection[AXIS_X] = 0;
+    directDirection[AXIS_Y] = 0;
+    directIdle[AXIS_X] = DIRECT_STOP_MS;
+    directIdle[AXIS_Y] = DIRECT_STOP_MS;
 #endif
     distances[AXIS_X] = 0;
     distances[AXIS_Y] = 0;
