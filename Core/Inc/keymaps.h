@@ -13,7 +13,7 @@ enum SKEYS {
   SK_KEYBOARD_LIGHT
 };
 
-#define KEY_NONE 0xFFFF
+#define KEY_NONE                0xFFFF
 
 #define BUTTON_SELECT           0x00
 #define BUTTON_START            0x01
@@ -68,7 +68,7 @@ enum SKEYS {
 #define BUTTON_SEMICOLON        0x36
 #define BUTTON_APOSTROPHE       0x37
 #define BUTTON_BACKSPACE        0x38
-#define BUTTON_RETURN           0x39
+#define BUTTON_ENTER            0x39
 #define BUTTON_FN_LEFT          0x3A
 #define BUTTON_FN_RIGHT         0x3B
 #define BUTTON_SPACE            0x3C
