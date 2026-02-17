@@ -29,6 +29,7 @@
 #include "hid_keyboard.h"
 #include "hid_mouse.h"
 #include "hid_consumer.h"
+#include "hid_gamepad.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -157,6 +158,24 @@ void jump_to_bootloader(void)
     IWDG->KR = 0xCCCC;
     while (1);  
 }
+
+void load_config(void)
+{
+  uint8_t current_layer = 0;
+
+  #define LAYER(l) { current_layer = l - 1; }
+  #define BIND(button, key) bind_button(current_layer, 0, button, key)
+  #define BIND_FN(button, key) bind_button(current_layer, 1, button, key)
+  #define TRACKBALL_SPEED(value) trackball_set_speed(current_layer, value)
+  #define TRACKBALL_ACCELERATION(value) trackball_set_acceleration(current_layer, value)
+  #define TRACKBALL_SCROLL_VERTICAL_SPEED(value) trackball_set_scroll_vertical_speed(current_layer, value)
+  #define TRACKBALL_SCROLL_VERTICAL_ACCELERATION(value) trackball_set_scroll_vertical_acceleration(current_layer, value)
+  #define TRACKBALL_SCROLL_HORIZONTAL_SPEED(value) trackball_set_scroll_horizontal_speed(current_layer, value)
+  #define TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION(value) trackball_set_scroll_horizontal_acceleration(current_layer, value)
+
+  #include "layers.h"  
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -193,7 +212,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   
   // Initialize keyboard state
-  keyboard_state.layer = DEF_LAYER;
+  keyboard_state.layer = 0;
+  keyboard_state.fn = 0;
   keyboard_state.mod_keys_on = 0;
   keyboard_state.backlight = KEYBOARD_INITIAL_BACKLIGHT_VALUE_ID;
   if (keyboard_state.backlight >= (sizeof(backlight_vals) / sizeof(backlight_vals[0]))) {
@@ -202,6 +222,7 @@ int main(void)
   keyboard_state.fn_lock = 0;
   keyboard_state.game_mode = 0;
   keyboard_state.leds_timer = 0;
+  load_config();
   
   // Initialize modules
   matrix_init();

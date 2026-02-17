@@ -18,6 +18,7 @@ typedef struct {
 
 typedef struct {
     uint8_t layer;
+    uint8_t fn;
     uint16_t mod_keys_on;
     uint8_t backlight;
     uint8_t fn_lock;

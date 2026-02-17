@@ -11,7 +11,7 @@ static uint32_t keys_prev;
 KEY_DEB keypad_debouncing;
 
 // Pin definitions for keys
-static GPIO_TypeDef* keys_port[KEYS_NUM] = {
+static GPIO_TypeDef* keys_port[NON_MATRIX_KEYS] = {
     KEY0_GPIO_Port, KEY1_GPIO_Port, KEY2_GPIO_Port, KEY3_GPIO_Port,
     KEY4_GPIO_Port, KEY5_GPIO_Port, KEY6_GPIO_Port, KEY7_GPIO_Port,
     KEY8_GPIO_Port, KEY9_GPIO_Port, KEY10_GPIO_Port, KEY11_GPIO_Port,
@@ -19,7 +19,7 @@ static GPIO_TypeDef* keys_port[KEYS_NUM] = {
     KEY16_GPIO_Port
 };
 
-static const uint16_t keys_pin[KEYS_NUM] = {
+static const uint16_t keys_pin[NON_MATRIX_KEYS] = {
     KEY0_Pin, KEY1_Pin, KEY2_Pin, KEY3_Pin, 
     KEY4_Pin, KEY5_Pin, KEY6_Pin, KEY7_Pin,
     KEY8_Pin, KEY9_Pin, KEY10_Pin, KEY11_Pin,
@@ -38,7 +38,7 @@ uint8_t scan_non_matrix(void)
     uint32_t data = 0;
     uint8_t s;
     
-    for (int i = 0; i < KEYS_NUM; i++) {
+    for (int i = 0; i < NON_MATRIX_KEYS; i++) {
         s = read_io(i);
         data |= s << i;
     }
@@ -69,7 +69,7 @@ void non_matrix_task(void)
     change = keys ^ keys_prev;
     
     if (change) {
-        for (uint8_t c = 0; c < KEYS_NUM; c++, mask <<= 1) {
+        for (uint8_t c = 0; c < NON_MATRIX_KEYS; c++, mask <<= 1) {
             if (change & mask) {
                 pressed = keys & mask;
                 if (pressed) {

@@ -21,23 +21,38 @@ static volatile int8_t distances[AXIS_NUM];
 static RateMeter rateMeter[AXIS_NUM];
 static RateMeter wheelRate[AXIS_NUM];
 static Glider glider[AXIS_NUM];
-static int8_t wheelBuffer;
-static int8_t hWheelBuffer;  // Horizontal wheel buffer
+static int16_t wheelBuffer;   /* Accumulates encoder ticks; int16_t to avoid overflow */
+static int16_t hWheelBuffer;  /* Horizontal wheel buffer */
 static bool asWheel = false;
 static bool lastWheelMode = false;
 
+// Trackball configuration parameters for each layer
+static float config_acceleration_exponent[LAYERS_NUM] = {0};
+static float config_acceleration_divisor[LAYERS_NUM] = {0};
+static float config_scroll_vertical_exponent[LAYERS_NUM] = {0};
+static float config_scroll_vertical_divisor[LAYERS_NUM] = {0};
+static float config_scroll_horizontal_exponent[LAYERS_NUM] = {0};
+static float config_scroll_horizontal_divisor[LAYERS_NUM] = {0};
+static int config_scroll_vertical_denominator[LAYERS_NUM] = {0};
+static int config_scroll_horizontal_denominator[LAYERS_NUM] = {0};
+
+// Trackball configuration parameters for the current layer
+static float acceleration_exponent;
+static float acceleration_divisor;
+static int scroll_vertical_denominator;
+static float scroll_vertical_exponent;
+static float scroll_vertical_divisor;
+static int scroll_horizontal_denominator;
+static float scroll_horizontal_exponent;
+static float scroll_horizontal_divisor;
+
 static float rateToVelocityCurve(float input)
 {
-    float rate = fabsf(input);
     // Power curve with exponent for smooth acceleration at all speeds
-    // More gradual than quadratic, works well for both slow and fast movements
-    if (!keyboard_state.game_mode) {
-        // Normal acceleration curve
-        return powf(rate, TRACKBALL_ACCELERATION_EXPONENT) / TRACKBALL_ACCELERATION_DIVISOR;
-    } else {
-        // Game mode acceleration curve
-        return powf(rate, TRACKBALL_GAME_ACCELERATION_EXPONENT) / TRACKBALL_GAME_ACCELERATION_DIVISOR;
-    }
+    // More gradual than quadratic, works well for both slow and fast movements    
+
+    float rate = fabsf(input);
+    return powf(rate, acceleration_exponent) / acceleration_divisor;
 }
 
 static int8_t applyScrollAcceleration(int8_t steps, float rate, float exponent, float divisor)
@@ -169,11 +184,11 @@ void trackball_task(void)
     }
     last_time = current_time;
     
-    int8_t x = 0, y = 0, w = 0;
+    int8_t x = 0, y = 0, w = 0, hw = 0;
     
     __disable_irq();
-    // Use fn_on instead of select_on for wheel mode (Fn + trackball)
-    asWheel = keyboard_state.layer == FN_LAYER;
+    // Use wheel mode (Fn + trackball)
+    asWheel = keyboard_state.fn;
     
     // Reset wheel buffers only when switching modes
     if (asWheel != lastWheelMode) {
@@ -191,24 +206,40 @@ void trackball_task(void)
         lastWheelMode = asWheel;
     }
     
-    if (asWheel) {
+    if (asWheel) {        
         ratemeter_tick(&wheelRate[AXIS_X], delta);
         ratemeter_tick(&wheelRate[AXIS_Y], delta);
+
         // Vertical scroll (wheel) - Y axis
         wheelBuffer += distances[AXIS_Y];
-        w = wheelBuffer / TRACKBALL_SCROLL_VERTICAL_DENOM;
-        wheelBuffer -= w * TRACKBALL_SCROLL_VERTICAL_DENOM;
+        const int div_v = (scroll_vertical_denominator > 0) ? scroll_vertical_denominator : 1;
+        const int32_t steps_v = wheelBuffer / div_v;
+        w = clamp_int8(steps_v);
+        wheelBuffer -= (int16_t)w * div_v;
         if (w != 0) {
             const float scrollRate = ratemeter_rate(&wheelRate[AXIS_Y]);
             w = applyScrollAcceleration(
                 w,
                 scrollRate,
-                TRACKBALL_SCROLL_VERTICAL_EXPONENT,
-                TRACKBALL_SCROLL_VERTICAL_DIVISOR);
+                scroll_vertical_exponent,
+                scroll_vertical_divisor);
         }
         
         // Horizontal scroll (pan) - X axis
         hWheelBuffer += distances[AXIS_X];
+        const int div_h = (scroll_horizontal_denominator > 0) ? scroll_horizontal_denominator : 1;
+        const int32_t steps_h = hWheelBuffer / div_h;
+        hw = clamp_int8(steps_h);
+        hWheelBuffer -= (int16_t)hw * div_h;
+        if (hw != 0) {
+            const float panRate = ratemeter_rate(&wheelRate[AXIS_X]);
+            hw = applyScrollAcceleration(
+                hw,
+                panRate,
+                scroll_horizontal_exponent,
+                scroll_horizontal_divisor);
+        }
+
         x = 0;  // No X movement in wheel mode
         y = 0;  // No Y movement in wheel mode
     } else {
@@ -219,7 +250,7 @@ void trackball_task(void)
         x = rX.value;
         y = rY.value;
         if (rX.stopped) {
-            glider_stop(&glider[AXIS_Y]);
+            glider_stop(&glider[AXIS_X]);
         }
         if (rY.stopped) {
             glider_stop(&glider[AXIS_Y]);
@@ -232,19 +263,6 @@ void trackball_task(void)
     
     if (asWheel) {
         // In wheel mode, use pan for horizontal scroll
-        int8_t hw = 0;
-        if (hWheelBuffer != 0) {
-            hw = hWheelBuffer / TRACKBALL_SCROLL_HORIZONTAL_DENOM;
-            hWheelBuffer -= hw * TRACKBALL_SCROLL_HORIZONTAL_DENOM;
-            if (hw != 0) {
-                const float panRate = ratemeter_rate(&wheelRate[AXIS_X]);
-                hw = applyScrollAcceleration(
-                    hw,
-                    panRate,
-                    TRACKBALL_SCROLL_HORIZONTAL_EXPONENT,
-                    TRACKBALL_SCROLL_HORIZONTAL_DIVISOR);
-            }
-        }
         if (w != 0 || hw != 0) {
             hid_mouse_move_with_pan(0, 0, -w, hw);  // Invert horizontal scroll direction
             #ifdef KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL
@@ -259,6 +277,68 @@ void trackball_task(void)
             #endif
         }
     }
+}
+
+void trackball_load_layer_config(void)
+{
+    #define LOAD_CONFIG(name, default_value) \
+        name = config_##name[keyboard_state.layer]; \
+        if (!name && keyboard_state.layer > 0) { \
+            name = config_##name[0]; \
+        } \
+        if (!name) name = default_value;
+
+    LOAD_CONFIG(acceleration_exponent, 1.2f);
+    LOAD_CONFIG(acceleration_divisor, 80);
+    LOAD_CONFIG(scroll_vertical_denominator, 2);
+    LOAD_CONFIG(scroll_vertical_exponent, 1.30f);
+    LOAD_CONFIG(scroll_vertical_divisor, 100.0f);
+    LOAD_CONFIG(scroll_horizontal_denominator, 3);
+    LOAD_CONFIG(scroll_horizontal_exponent, 1.20f);
+    LOAD_CONFIG(scroll_horizontal_divisor, 200.0f);
+
+    #undef LOAD_CONFIG
+}
+
+void trackball_set_acceleration(uint8_t layer, float value)
+{
+    config_acceleration_exponent[layer] = 1.0f + value;
+}
+
+void trackball_set_speed(uint8_t layer, float value)
+{
+    // 125 -> 80
+    config_acceleration_divisor[layer] = 10000.0f / value;
+}
+
+void trackball_set_scroll_vertical_denominator(uint8_t layer, int denominator)
+{
+    config_scroll_vertical_denominator[layer] = denominator;
+}
+
+void trackball_set_scroll_vertical_acceleration(uint8_t layer, float value)
+{
+    config_scroll_vertical_exponent[layer] = 1.0f + value;
+}
+
+void trackball_set_scroll_vertical_speed(uint8_t layer, float value)
+{
+    config_scroll_vertical_divisor[layer] = 10000.0f / value;
+}
+
+void trackball_set_scroll_horizontal_denominator(uint8_t layer, int denominator)
+{
+    config_scroll_horizontal_denominator[layer] = denominator;
+}
+    
+void trackball_set_scroll_horizontal_acceleration(uint8_t layer, float value)
+{
+    config_scroll_horizontal_exponent[layer] = 1.0f + value;
+}
+
+void trackball_set_scroll_horizontal_speed(uint8_t layer, float value)
+{
+    config_scroll_horizontal_divisor[layer] = 10000.0f / value;
 }
 
 void trackball_init(void)
@@ -277,5 +357,7 @@ void trackball_init(void)
     hWheelBuffer = 0;
     asWheel = false;
     lastWheelMode = false;
+
+    trackball_load_layer_config();
 }
 

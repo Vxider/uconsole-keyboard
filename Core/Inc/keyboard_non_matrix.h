@@ -9,7 +9,7 @@
 #   define KEY_DEBOUNCE 5
 #endif
 
-#define KEYS_NUM 17
+#define NON_MATRIX_KEYS 17
 
 void non_matrix_init(void);
 void non_matrix_task(void);

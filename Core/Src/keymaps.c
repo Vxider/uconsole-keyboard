@@ -4,11 +4,17 @@
 #include "hid_mouse.h"
 #include "hid_consumer.h"
 #include "hid_gamepad.h"
+#include "trackball.h"
 #include "main.h"
 #include "stm32f1xx_hal.h"
 
 KEYBOARD_STATE keyboard_state;
 
+static uint8_t  layer_enabled[LAYERS_NUM] = {0};
+static uint16_t matrix_maps[LAYERS_NUM * 2][MATRIX_KEYS] = {0};
+static uint16_t keys_maps[LAYERS_NUM * 2][NON_MATRIX_KEYS] = {0};
+
+/*
 // Mappings for the keyboard matrix
 const uint16_t matrix_maps[][MATRIX_KEYS] = {
     [DEF_LAYER] = {
@@ -44,7 +50,7 @@ const uint16_t matrix_maps[][MATRIX_KEYS] = {
 };
 
 // Mappings for the non-matrix keys
-const uint16_t keys_maps[][KEYS_NUM] = {
+const uint16_t keys_maps[][NON_MATRIX_KEYS] = {
     [DEF_LAYER] = {
         MOUSE_MIDDLE,           // Trackball button
         KEY_UP_ARROW,           // Up
@@ -103,21 +109,16 @@ const uint16_t keys_maps[][KEYS_NUM] = {
         0,                      // Gamepad R
     }
 };
+*/
 
 static uint16_t matrix_pick_map[MATRIX_KEYS] = {0};
-static uint16_t non_matrix_pick_map[KEYS_NUM] = {0};
+static uint16_t non_matrix_pick_map[NON_MATRIX_KEYS] = {0};
 
 static void do_the_key(uint16_t k, uint8_t mode)
 {
     switch (k) {
         case SK_FN_KEY:
-            //if (mode == KEY_PRESSED && HAL_GetTick() - keyboard_state.last_pressed_time < 300 && keyboard_state.last_pressed_key == SK_FN_KEY)
-            if (mode == KEY_PRESSED && keyboard_state.layer == FN_LAYER) // Fn+Fn = Game mode
-            {
-                keyboard_state.game_mode = !keyboard_state.game_mode;
-                leds_blink(keyboard_state.game_mode + 1, LEDS_BLINK_PERIOD_LONG);
-            }
-            keyboard_state.layer = mode == KEY_PRESSED ? FN_LAYER : DEF_LAYER;
+            keyboard_state.fn = mode == KEY_PRESSED;
             break;
 
         case CONSUMER_VOLUME_DOWN:
@@ -140,7 +141,7 @@ static void do_the_key(uint16_t k, uint8_t mode)
         case SK_KEYBOARD_LOCK:
             if (mode == KEY_PRESSED) {
                 keyboard_state.fn_lock = !keyboard_state.fn_lock;
-                leds_blink(keyboard_state.fn_lock + 1, LEDS_BLINK_PERIOD_SHORT);
+                leds_blink(keyboard_state.fn_lock + 1, LEDS_BLINK_PERIOD_LONG);
             }
             break;
 
@@ -177,50 +178,88 @@ static void do_the_key(uint16_t k, uint8_t mode)
     }
 }
 
-static uint8_t is_f_key(uint16_t k)
+void switch_layer(uint8_t layer)
 {
-    switch (k) {
-        case KEY_F1:
-        case KEY_F2:
-        case KEY_F3:
-        case KEY_F4:
-        case KEY_F5:
-        case KEY_F6:
-        case KEY_F7:
-        case KEY_F8:
-        case KEY_F9:
-        case KEY_F10:
-        case KEY_F11:
-        case KEY_F12:
-            return 1;
-        default:
-            return 0;
+    if (layer >= LAYERS_NUM || !layer_enabled[layer]) {
+        return;
     }
+    keyboard_state.layer = layer;
+    trackball_load_layer_config();
+    leds_blink(layer + 1, LEDS_BLINK_PERIOD_SHORT);
 }
 
 void matrix_action(uint8_t row, uint8_t col, uint8_t mode)
 {
     uint16_t k;
     uint8_t addr = row * MATRIX_COLS + col;
+    uint8_t fn = keyboard_state.fn ? 1 : 0;
 
-    if (keyboard_state.game_mode && keyboard_state.layer == DEF_LAYER && matrix_maps[GAME_LAYER][addr]) {
-        // Game mode is active and the key is in the game layer
-        k = matrix_maps[GAME_LAYER][addr];
-    } else {
-        k = matrix_maps[keyboard_state.layer][addr];
-        if (!k) {
-            k = matrix_maps[DEF_LAYER][addr];
+    if ((keyboard_state.mod_keys_on & KEY_LEFT_CTRL) && (keyboard_state.mod_keys_on & KEY_RIGHT_CTRL) && mode == KEY_PRESSED) {
+        switch (addr)
+        {
+            case BUTTON_1:
+                switch_layer(0); return;
+            case BUTTON_2:
+                switch_layer(1); return;
+            case BUTTON_3:
+                switch_layer(2); return;
+            case BUTTON_4:
+                switch_layer(3); return;
+            case BUTTON_5:
+                switch_layer(4); return;
+            case BUTTON_6:
+                switch_layer(5); return;
+            case BUTTON_7:
+                switch_layer(6); return;
+            case BUTTON_8:
+                switch_layer(7); return;
+            case BUTTON_9:
+                switch_layer(8); return;
+            case BUTTON_0:
+                switch_layer(9); return;
+            default:
+                break;
         }
     }
 
-    if ((is_f_key(matrix_maps[DEF_LAYER][addr]) || is_f_key(matrix_maps[FN_LAYER][addr])) && keyboard_state.fn_lock) {
-        uint8_t new_k = matrix_maps[keyboard_state.layer == DEF_LAYER ? FN_LAYER : DEF_LAYER][addr];
-        if (new_k != KEY_NONE) {
-            k = new_k;
+    if (keyboard_state.fn_lock) {
+        switch (addr)
+        {
+            case BUTTON_1:
+            case BUTTON_2:
+            case BUTTON_3:
+            case BUTTON_4:
+            case BUTTON_5:
+            case BUTTON_6:
+            case BUTTON_7:
+            case BUTTON_8:
+            case BUTTON_9:
+            case BUTTON_0:
+            case BUTTON_MINUS:
+            case BUTTON_EQUAL:
+                fn = !fn;
+                break;
+            default:
+                break;
         }
     }
 
+    k = matrix_maps[keyboard_state.layer * 2 + fn][addr];
     if (k == KEY_NONE) {
+        return;
+    }
+    if (!k && keyboard_state.layer > 0) {
+        // Non-default layer, mapping is empty, try default layer
+        k = matrix_maps[0 * 2 + fn][addr];
+        if (k == KEY_NONE) {
+            return;
+        }
+    }
+    if (!k && fn) {
+        // Still no mapping? Try non-fn layer
+        k = matrix_maps[0][addr];
+    }
+    if (!k || k == KEY_NONE) {
         return;
     }
     
@@ -247,33 +286,35 @@ void matrix_action(uint8_t row, uint8_t col, uint8_t mode)
 void non_matrix_action(uint8_t col, uint8_t mode)
 {
     uint16_t k;
+    uint8_t fn = keyboard_state.fn ? 1 : 0;
 
     /* Emergency recovery mode */
-    if (col == 0 /* Trackball button */ && mode == KEY_PRESSED && (keyboard_state.mod_keys_on & KEY_LEFT_CTRL) && (keyboard_state.mod_keys_on & KEY_RIGHT_CTRL)) {
-        jump_to_bootloader();
-    }    
-
-    if (keyboard_state.game_mode && keyboard_state.layer == DEF_LAYER && keys_maps[GAME_LAYER][col]) {
-        // Game mode is active and the key is in the game layer
-        k = keys_maps[GAME_LAYER][col];
-    } else {
-        k = keys_maps[keyboard_state.layer][col];
-        if (!k) {
-            k = keys_maps[DEF_LAYER][col];
-        }
+    if ((keyboard_state.mod_keys_on & KEY_LEFT_CTRL) 
+        && (keyboard_state.mod_keys_on & KEY_RIGHT_CTRL) 
+        && mode == KEY_PRESSED 
+        && col == (BUTTON_TRACKBALL - MATRIX_KEYS)) {
+            jump_to_bootloader();
     }
 
-    if ((is_f_key(keys_maps[DEF_LAYER][col]) || is_f_key(keys_maps[FN_LAYER][col])) && keyboard_state.fn_lock) {
-        uint8_t new_k = keys_maps[keyboard_state.layer == DEF_LAYER ? FN_LAYER : DEF_LAYER][col];
-        if (new_k != KEY_NONE) {
-            k = new_k;
-        }
-    }
-    
+    k = keys_maps[keyboard_state.layer * 2 + fn][col];
     if (k == KEY_NONE) {
         return;
     }
-
+    if (!k && keyboard_state.layer > 0) {
+        // Non-default layer, mapping is empty, try default layer
+        k = keys_maps[0 * 2 + fn][col];
+        if (k == KEY_NONE) {
+            return;
+        }
+    }
+    if (!k && fn) {
+        // Still no mapping? Try non-fn layer
+        k = keys_maps[0][col];
+    }
+    if (!k || k == KEY_NONE) {
+        return;
+    }
+    
     if (mode == KEY_PRESSED) {
         if (non_matrix_pick_map[col] == 0) {
             non_matrix_pick_map[col] = k;
@@ -289,4 +330,12 @@ void non_matrix_action(uint8_t col, uint8_t mode)
             non_matrix_pick_map[col] = 0;
         }
     }
+}
+
+void bind_button(uint8_t layer, uint8_t fn, uint16_t button, uint16_t key) {
+    layer_enabled[layer] = 1;
+    if (button < MATRIX_KEYS)
+        matrix_maps[(layer * 2) + (fn & 1)][button] = key;
+    else if (button < MATRIX_KEYS + NON_MATRIX_KEYS)
+        keys_maps[(layer * 2) + (fn & 1)][button - MATRIX_KEYS] = key;
 }

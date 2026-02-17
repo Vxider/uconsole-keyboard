@@ -144,6 +144,8 @@ void jump_to_bootloader(void);
 #define KEY10_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+#define LAYERS_NUM 10
+
 #define KEY_PRESSED 1
 #define KEY_RELEASED 0
 
