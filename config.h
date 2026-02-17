@@ -20,10 +20,27 @@ static const uint16_t backlight_vals[3] = {0, 500, 2000};
 #define KEYBOARD_BACKLIGHT_DIMMED_OUT_VALUE 0
 
 // If defined, the keyboard backlight will resume when the trackball is moved
-#define KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL
+// 0 = never resume, 1 = resume when the trackball is moved
+#define KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL 1
 
-// Trackball scroll step denominators (higher = larger physical movement per scroll tick)
-#define TRACKBALL_SCROLL_VERTICAL_DENOM 2
-#define TRACKBALL_SCROLL_HORIZONTAL_DENOM 3
+// Glider adds inertia: cursor keeps moving after you stop the trackball.
+// 1 = on (cursor coasts to a stop), 0 = off (cursor stops instantly)
+#define GLIDER_ENABLED 1
+
+// How long (ms) the cursor moves at full speed before it starts slowing down.
+// Higher = longer "slide" before braking. 0 = start braking immediately.
+#define GLIDER_SUSTAIN_MAX_MS 15
+
+// Scales sustain time by movement speed: sustain_ms = speed * this value.
+// Higher = fast flicks coast longer. The result is capped by SUSTAIN_MAX_MS.
+#define GLIDER_SUSTAIN_SPEED_SCALE 5.0f
+
+// How fast the cursor slows down after sustain. Each millisecond, speed is
+// multiplied by this value. Lower = stops faster, higher = slides longer.
+// 0.85 ≈ stops in ~35ms, 0.90 ≈ ~55ms, 0.95 ≈ ~100ms, 0.80 ≈ ~25ms
+#define GLIDER_DECAY_FACTOR_PER_MS 0.85f
+
+// When speed drops below this, cursor stops completely. No need to change.
+#define GLIDER_SPEED_EPSILON 0.01f
 
 #endif

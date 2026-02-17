@@ -24,6 +24,10 @@ static inline int16_t min_int16(int16_t x, int16_t y) {
     return (x < y) ? x : y;
 }
 
+static inline uint16_t min_uint16(uint16_t x, uint16_t y) {
+    return (x < y) ? x : y;
+}
+
 static inline float hypot_f(float x, float y) {
     return sqrtf(x * x + y * y);
 }

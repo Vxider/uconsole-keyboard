@@ -8,7 +8,6 @@ typedef struct {
     int8_t direction;
     float speed;
     uint16_t sustain;
-    uint16_t release;
     float error;
 } Glider;
 
