@@ -104,7 +104,8 @@ extern USBD_CUSTOM_HID_ItfTypeDef USBD_CustomHID_fops_FS;
   */
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
-
+int8_t Custom_HID_SendVendorValue(uint8_t* data);
+void hid_wait_for_usb_idle(void);
 /* USER CODE END EXPORTED_FUNCTIONS */
 
 /**

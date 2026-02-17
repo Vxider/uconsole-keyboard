@@ -47,6 +47,7 @@ Core/Src/hid_keyboard.c \
 Core/Src/hid_mouse.c \
 Core/Src/hid_gamepad.c \
 Core/Src/hid_consumer.c \
+Core/Src/hid_raw.c \
 Core/Src/ratemeter.c \
 Core/Src/glider.c \
 Core/Src/math_utils.c \
@@ -222,7 +223,7 @@ clean:
 # flash the device
 #######################################
 flash: $(BUILD_DIR)/$(TARGET).bin
-	cat to_bootloader.sh | sh
+	./to_bootloader.sh
 	@if [ "$$(uname -s)" = "Linux" ]; then \
 		sudo dfu-util -d 1EAF:0003 -a 2 -D $(BUILD_DIR)/$(TARGET).bin || true; \
 	else \

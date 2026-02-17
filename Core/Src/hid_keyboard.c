@@ -79,13 +79,3 @@ int8_t hid_keyboard_release_all(void)
     return result;
 }
 
-void hid_wait_for_usb_idle(void)
-{
-    // Wait until USB HID device is idle (report buffer is free)
-    USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
-    while (hhid != NULL && hhid->state != CUSTOM_HID_IDLE)
-    {
-        // Wait for state to become IDLE
-    }
-}
-

@@ -23,6 +23,7 @@
 
 /* USER CODE BEGIN INCLUDE */
 #include "leds.h"
+#include "hid_raw.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -212,6 +213,21 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
   0x75, 0x01,        //   Report Size (1)
   0x95, 0x08,        //   Report Count (8)
   0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+
+  // Vendor: single byte 0-255 for hidraw read/write (Report ID 5)
+  0x05, 0xFF,        // Usage Page (Vendor Defined)
+  0x09, 0x01,        // Usage (Vendor 1)
+  0xA1, 0x01,        // Collection (Application)
+  0x85, 0x05,        //   Report ID (5)
+  0x09, 0x01,        //   Usage (Vendor 1)
+  0x15, 0x00,        //   Logical Minimum (0)
+  0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+  0x75, 0x08,        //   Report Size (8)
+  0x95, 0x03,        //   Report Count (3)
+  0x81, 0x02,        //   Input (Data,Var,Abs)
+  0x09, 0x02,        //   Usage (Vendor 2)
+  0x91, 0x02,        //   Output (Data,Var,Abs)
+  0xC0,              // End Collection
   /* USER CODE END 0 */
   0xC0    /*     END_COLLECTION	             */
 };
@@ -244,7 +260,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 static int8_t CUSTOM_HID_Init_FS(void);
 static int8_t CUSTOM_HID_DeInit_FS(void);
-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state);
+static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state);
 
 /**
   * @}
@@ -293,27 +309,42 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
   * @param  state: Event state
   * @retval USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state)
+static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state)
 {
   /* USER CODE BEGIN 6 */
-  leds_set_state(state);
+  if (event_idx == 5U)
+  {
+    rawhid_on_recv(state);
+  }
+  else if (event_idx == 1U)
+  {
+    leds_set_state(state[0]);
+  }
   return (USBD_OK);
   /* USER CODE END 6 */
 }
 
 /* USER CODE BEGIN 7 */
 /**
-  * @brief  Send the report to the Host
-  * @param  report: The report to be sent
-  * @param  len: The report length
-  * @retval USBD_OK if all operations are OK else USBD_FAIL
+  * @brief  Send Report ID 5 (vendor value 0-255) to the host for hidraw read().
+  * @param  value: Byte to send (0-255)
+  * @retval USBD_OK if sent else USBD_FAIL
   */
-/*
-static int8_t USBD_CUSTOM_HID_SendReport_FS(uint8_t *report, uint16_t len)
+int8_t Custom_HID_SendVendorValue(uint8_t* data)
 {
-  return USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report, len);
+  uint8_t report[4] = { 0x05U, data[0], data[1], data[2] };
+  return (int8_t)USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report, 4U);
 }
-*/
+
+void hid_wait_for_usb_idle(void)
+{
+    // Wait until USB HID device is idle (report buffer is free)
+    USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
+    while (hhid != NULL && hhid->state != CUSTOM_HID_IDLE)
+    {
+        // Wait for state to become IDLE
+    }
+}
 /* USER CODE END 7 */
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */

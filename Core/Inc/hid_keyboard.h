@@ -121,7 +121,6 @@
 int8_t hid_keyboard_button(uint16_t key, uint8_t mode);
 int8_t hid_keyboard_release_all(void);
 int8_t hid_keyboard_modifier(uint16_t modifier_bit, uint8_t mode);
-void hid_wait_for_usb_idle(void);
 
 #endif
 

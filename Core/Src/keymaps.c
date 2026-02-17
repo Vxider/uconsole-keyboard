@@ -4,6 +4,7 @@
 #include "hid_mouse.h"
 #include "hid_consumer.h"
 #include "hid_gamepad.h"
+#include "hid_raw.h"
 #include "trackball.h"
 #include "main.h"
 #include "stm32f1xx_hal.h"
@@ -42,8 +43,8 @@ static void do_the_key(uint16_t k, uint8_t mode)
 
         case SK_KEYBOARD_LOCK:
             if (mode == KEY_PRESSED) {
-                keyboard_state.fn_lock = !keyboard_state.fn_lock;
-                leds_blink(keyboard_state.fn_lock + 1, LEDS_BLINK_PERIOD_LONG);
+                fn_lock_set(!keyboard_state.fn_lock);
+                rawhid_send();
             }
             break;
 
@@ -80,7 +81,7 @@ static void do_the_key(uint16_t k, uint8_t mode)
     }
 }
 
-void switch_layer(uint8_t layer)
+void layer_set(uint8_t layer)
 {
     if (layer >= LAYERS_NUM || !layer_enabled[layer]) {
         return;
@@ -88,6 +89,16 @@ void switch_layer(uint8_t layer)
     keyboard_state.layer = layer;
     trackball_load_layer_config();
     leds_blink(layer + 1, LEDS_BLINK_PERIOD_SHORT);
+}
+
+uint8_t layer_get(void)
+{
+    return keyboard_state.layer;
+}
+
+void fn_lock_set(uint8_t fn_lock) {
+    keyboard_state.fn_lock = fn_lock ? 1 : 0;
+    leds_blink(keyboard_state.fn_lock + 1, LEDS_BLINK_PERIOD_LONG);
 }
 
 void matrix_action(uint8_t row, uint8_t col, uint8_t mode)
@@ -100,25 +111,25 @@ void matrix_action(uint8_t row, uint8_t col, uint8_t mode)
         switch (addr)
         {
             case BUTTON_1:
-                switch_layer(0); return;
+                layer_set(0); rawhid_send(); return;
             case BUTTON_2:
-                switch_layer(1); return;
+                layer_set(1); rawhid_send(); return;
             case BUTTON_3:
-                switch_layer(2); return;
+                layer_set(2); rawhid_send(); return;
             case BUTTON_4:
-                switch_layer(3); return;
+                layer_set(3); rawhid_send(); return;
             case BUTTON_5:
-                switch_layer(4); return;
+                layer_set(4); rawhid_send(); return;
             case BUTTON_6:
-                switch_layer(5); return;
+                layer_set(5); rawhid_send(); return;
             case BUTTON_7:
-                switch_layer(6); return;
+                layer_set(6); rawhid_send(); return;
             case BUTTON_8:
-                switch_layer(7); return;
+                layer_set(7); rawhid_send(); return;
             case BUTTON_9:
-                switch_layer(8); return;
+                layer_set(8); rawhid_send(); return;
             case BUTTON_0:
-                switch_layer(9); return;
+                layer_set(9); rawhid_send(); return;
             default:
                 break;
         }

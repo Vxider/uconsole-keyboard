@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "keyboard_matrix.h"
 #include "keyboard_non_matrix.h"
+#include "keyboard_state.h"
 
 /* Special keys and virtual keys */
 enum SKEYS {
@@ -91,8 +92,13 @@ enum SKEYS {
 #define BUTTON_ALT_RIGHT        (MATRIX_KEYS + 0x0F)
 #define BUTTON_MOUSE_R          (MATRIX_KEYS + 0x10)
 
+extern KEYBOARD_STATE keyboard_state;
+
 void matrix_action(uint8_t row, uint8_t col, uint8_t mode);
 void non_matrix_action(uint8_t col, uint8_t mode);
 void bind_button(uint8_t layer, uint8_t fn, uint16_t button, uint16_t key);
+void layer_set(uint8_t layer);
+uint8_t layer_get(void);
+void fn_lock_set(uint8_t fn_lock);
 
 #endif

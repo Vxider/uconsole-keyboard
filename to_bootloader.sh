@@ -1,57 +1,60 @@
-#!/bin/sh
+#!/bin/bash
 
-DEVICE_NAME="ClockworkPI uConsole Keyboard"
-DFU_VID_PID="1eaf:0003"
-DEVICE_VID_PID="1eaf:0024"
+# Keyboard USB IDs (must match project: usbd_conf / .ioc)
+DEVICE_VID="1eaf"
+DEVICE_PID="0024"
+DFU_VID_PID="${DEVICE_VID}:0003"
+DEVICE_VID_PID="${DEVICE_VID}:${DEVICE_PID}"
 
-find_led_file() {
-    for led in $(find /sys/class/leds -name "*$1"); do
-        device_name=$(cat $led/device/name)
-        if [ "$device_name" = "$DEVICE_NAME" ]; then
-            echo $led
-            break
-        fi
+# Report ID 5, bootloader magic (matches firmware: jump_to_bootloader)
+BOOTLOADER_CMD='\x05\xFF\x55\xAA'
+
+# Find /dev/hidrawN for the given USB VID:PID (sysfs uses lowercase hex)
+find_hidraw_by_vid_pid() {
+    for d in /sys/class/hidraw/hidraw*; do
+        [ -d "$d" ] || continue
+        [ -e "$d/device" ] || continue
+        dev="/dev/$(basename "$d")"
+        # Resolve device symlink so we walk the real path to find idVendor/idProduct
+        p=$(readlink -f "$d/device" 2>/dev/null) || p="$d/device"
+        while [ -n "$p" ] && [ "$p" != "/" ]; do
+            if [ -f "$p/idVendor" ] && [ -f "$p/idProduct" ]; then
+                ven=$(cat "$p/idVendor" 2>/dev/null | tr 'A-F' 'a-f')
+                prod=$(cat "$p/idProduct" 2>/dev/null | tr 'A-F' 'a-f')
+                if [ "$ven" = "$DEVICE_VID" ] && [ "$prod" = "$DEVICE_PID" ]; then
+                    echo "$dev"
+                    return 0
+                fi
+                break
+            fi
+            p=$(dirname "$p")
+        done
     done
     return 1
 }
 
-bootloader_via_leds() {
-    echo "Rebootting to the bootloader via LEDs..."
-    led_compose=$(find_led_file "compose")
-    led_kana=$(find_led_file "kana")
-    if [ -z "$led_compose" ] || [ -z "$led_kana" ]; then
-        echo "LED files not found"
-        return 1 
+bootloader_via_hidraw() {
+    echo "Putting keyboard into bootloader via hidraw..."
+    hidraw=$(find_hidraw_by_vid_pid)
+    if [ -z "$hidraw" ]; then
+        echo "No hidraw device found for ${DEVICE_VID}:${DEVICE_PID}"
+        return 1
     fi
-
-    TIMEOUT=30; \
-    while ! lsusb | grep -q "$DFU_VID_PID"; do
-        echo -n "."
-        if [ -f "$led_compose/brightness" ] && [ -f "$led_kana/brightness" ]; then
-            echo 0 > "$led_compose/brightness"
-            echo 0 > "$led_kana/brightness"
-            echo 1 > "$led_compose/brightness"
-            echo 1 > "$led_kana/brightness"
-        fi
-        sleep 1
-        TIMEOUT=$((TIMEOUT - 1))
-        if [ $TIMEOUT -eq 0 ]; then
-            echo
-            echo "Timeout waiting for DFU mode"
-            exit 1
-        fi
-    done
-    echo
-    exit 0
+    echo "Using $hidraw"
+    if ! printf '%b' "$BOOTLOADER_CMD" | sudo tee "$hidraw" >/dev/null; then
+        echo "Failed to write to $hidraw (try sudo)"
+        return 1
+    fi
+    return 0
 }
 
 wait_for_bootloader() {
-    TIMEOUT=30; \
-    while ! lsusb | grep -q "$DFU_VID_PID"; do
+    TIMEOUT=30
+    while ! lsusb | grep -qi "$DFU_VID_PID"; do
         echo -n "."
         sleep 1
         TIMEOUT=$((TIMEOUT - 1))
-        if [ $TIMEOUT -eq 0 ]; then
+        if [ "$TIMEOUT" -eq 0 ]; then
             echo
             echo "Timeout waiting for DFU mode"
             exit 1
@@ -61,16 +64,20 @@ wait_for_bootloader() {
     exit 0
 }
 
-# If not Linux or lsusb is not installed, exit
+# Only run on Linux
 if [ "$(uname -s)" != "Linux" ]; then
     echo "Can't put the keyboard into DFU mode automatically on this platform, please put it into DFU mode manually"
     exit 0
 fi
 
-# Check if the keyboard is preset
 if lsusb | grep -q "$DEVICE_VID_PID"; then
-    bootloader_via_leds
+    if bootloader_via_hidraw; then
+        sleep 1
+        wait_for_bootloader
+    else
+        exit 1
+    fi
 else
-    echo "Connect the keyboard to the computer and put it into DFU mode"
+    echo "Keyboard not found (${DEVICE_VID_PID}). Connect it and put it into DFU mode, or connect and run this script again."
     wait_for_bootloader
 fi

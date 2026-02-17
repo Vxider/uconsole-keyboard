@@ -47,7 +47,9 @@ extern "C" {
 #define CUSTOM_HID_EPIN_SIZE                 0x09U
 
 #define CUSTOM_HID_EPOUT_ADDR                0x01U
-#define CUSTOM_HID_EPOUT_SIZE                0x02U
+/* WARNING: STM32CubeMX generates 0x02U for CUSTOM_HID_EPOUT_SIZE, but it should be 0x04! */
+/* Always revert this to 0x04U if you use STM32CubeMX to regenerate the files. */
+#define CUSTOM_HID_EPOUT_SIZE                0x04U
 
 #define USB_CUSTOM_HID_CONFIG_DESC_SIZ       41U
 #define USB_CUSTOM_HID_DESC_SIZ              9U
@@ -98,7 +100,7 @@ typedef struct _USBD_CUSTOM_HID_Itf
   uint8_t                  *pReport;
   int8_t (* Init)(void);
   int8_t (* DeInit)(void);
-  int8_t (* OutEvent)(uint8_t event_idx, uint8_t state);
+  int8_t (* OutEvent)(uint8_t event_idx, uint8_t* state);
 
 } USBD_CUSTOM_HID_ItfTypeDef;
 
