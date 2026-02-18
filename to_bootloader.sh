@@ -7,7 +7,7 @@ DFU_VID_PID="${DEVICE_VID}:0003"
 DEVICE_VID_PID="${DEVICE_VID}:${DEVICE_PID}"
 
 # Report ID 5, bootloader magic (matches firmware: jump_to_bootloader)
-BOOTLOADER_CMD='\x05\xFF\x55\xAA'
+BOOTLOADER_CMD='\x05\xFE\x55\xAA'
 
 # Find /dev/hidrawN for the given USB VID:PID (sysfs uses lowercase hex)
 find_hidraw_by_vid_pid() {
