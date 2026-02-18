@@ -46,8 +46,7 @@ write_report() {
     printf '%b%b%b%b' "$REPORT_ID" "$(printf '\\x%02x' "$b0")" "$(printf '\\x%02x' "$b1")" "$(printf '\\x%02x' "$b2")" | sudo tee "$HIDRAW" >/dev/null
 }
 
-cmd_get() {
-    # 0x0F = don't change layer, 0x00 in byte2 = don't change flags -> device echoes current state.
+cmd() {
     # Start reader first (device sends reply after our write), then write.
     # Loop: read one report per iteration with short timeout; cat always waits until timeout,
     # so many short reads (0.05s) are faster than one long wait. Skip reports with ID != 0x05.
@@ -65,7 +64,7 @@ cmd_get() {
     ) &
     local pid=$!
     sleep 0.02
-    write_report 15 0 0  # 0x0F = don't change layer, 0x00 = don't change flags
+    write_report $1 $2 $3
     wait "$pid" 2>/dev/null
     local hex
     hex=$(cat "$tmp" 2>/dev/null)
@@ -88,6 +87,11 @@ cmd_get() {
     # Convert to 1-based for user (0-9 -> 1-10)
     local layer_user=$((layer_internal + 1))
     echo "layer=$layer_user fn_lock=$([ "$fn_lock" -eq 1 ] && echo on || echo off)"
+}
+
+cmd_get() {
+    # 0x0F = don't change layer, 0x00 in byte2 = don't change flags -> device echoes current state.
+    cmd 15 0 0
 }
 
 cmd_set() {
@@ -126,7 +130,7 @@ cmd_set() {
         fi
     fi
     
-    write_report "$b0" "$b1" "$b2"
+    cmd "$b0" "$b1" "$b2"
     echo "OK"
 }
 
@@ -144,7 +148,7 @@ fi
 
 case "${1:-}" in
     get)  cmd_get ;;
-    set)  shift; cmd_set "$@" ; cmd_get; ;;
+    set)  shift; cmd_set "$@" ; ;;
     *)
         echo "Usage: $0 get | set [--layer N] [--fn-lock on|off]" >&2
         echo "  Layer N: 1-10 (1-based)" >&2

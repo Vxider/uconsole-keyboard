@@ -41,7 +41,7 @@ bootloader_via_hidraw() {
         return 1
     fi
     echo "Using $hidraw"
-    if ! printf '%b' "$BOOTLOADER_CMD" | sudo tee "$hidraw" >/dev/null; then
+    if ! printf '%b' "$BOOTLOADER_CMD" | sudo tee "$hidraw" 2>&1 >/dev/null; then
         echo "Failed to write to $hidraw (try sudo)"
         return 1
     fi
@@ -51,6 +51,10 @@ bootloader_via_hidraw() {
 wait_for_bootloader() {
     TIMEOUT=30
     while ! lsusb | grep -qi "$DFU_VID_PID"; do
+        # send bootloader magic again
+        [ -e "$hidraw" ] && printf '%b' "$BOOTLOADER_CMD" | sudo tee "$hidraw" 2>&1 >/dev/null
+        # failsafe, just in case if we created a file in the previous step
+        [ -f "$hidraw" ] && sudo rm -f "$hidraw"
         echo -n "."
         sleep 1
         TIMEOUT=$((TIMEOUT - 1))
@@ -59,7 +63,7 @@ wait_for_bootloader() {
             echo "Timeout waiting for DFU mode"
             exit 1
         fi
-    done
+    done    
     echo
     exit 0
 }
