@@ -25,7 +25,7 @@ static const uint16_t backlight_vals[3] = {0, 500, 2000};
 
 // Glider adds inertia: cursor keeps moving after you stop the trackball.
 // 1 = on (cursor coasts to a stop), 0 = off (cursor stops instantly)
-#define GLIDER_ENABLED 1
+#define GLIDER_ENABLED 0
 
 // How long (ms) the cursor moves at full speed before it starts slowing down.
 // Higher = longer "slide" before braking. 0 = start braking immediately.
