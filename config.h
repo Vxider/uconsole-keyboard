@@ -43,4 +43,13 @@ static const uint16_t backlight_vals[3] = {0, 500, 2000};
 // When speed drops below this, cursor stops completely. No need to change.
 #define GLIDER_SPEED_EPSILON 0.01f
 
+// If defined, the double semicolon will be replaced with an apostrophe
+// This is useful for typing Russian text with the keyboard (жж -> э)
+// or if you want to use your left hand to type quotes (;; -> ' and :: -> ")
+// 0 = off, 1 = on
+#define REPLACE_DOUBLE_SEMICOLON_WITH_APOSTROPHE 1
+
+// If the key is pressed and released within this time, the double press feature will be triggered
+#define DOUBLE_PRESS_TIME_MS 300
+
 #endif

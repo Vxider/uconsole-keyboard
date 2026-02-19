@@ -212,16 +212,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   
   // Initialize keyboard state
-  keyboard_state.layer = 0;
-  keyboard_state.fn = 0;
-  keyboard_state.mod_keys_on = 0;
+  memset(&keyboard_state, 0, sizeof(keyboard_state));
   keyboard_state.backlight = KEYBOARD_INITIAL_BACKLIGHT_VALUE_ID;
   if (keyboard_state.backlight >= (sizeof(backlight_vals) / sizeof(backlight_vals[0]))) {
     keyboard_state.backlight = 0;
   }
-  keyboard_state.fn_lock = 0;
-  keyboard_state.game_mode = 0;
-  keyboard_state.leds_timer = 0;
   load_config();
   
   // Initialize modules

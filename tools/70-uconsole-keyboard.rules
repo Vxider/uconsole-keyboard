@@ -1,0 +1,5 @@
+# uConsole keyboard (VID 1eaf, PID 0024): allow access to hidraw
+# Copy this file into /etc/udev/rules.d/
+# and `sudo udevadm control --reload-rules && sudo udevadm trigger` to apply changes.
+
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1eaf", ATTRS{idProduct}=="0024", MODE="0666"

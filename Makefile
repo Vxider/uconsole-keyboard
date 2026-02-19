@@ -223,7 +223,7 @@ clean:
 # flash the device
 #######################################
 flash: $(BUILD_DIR)/$(TARGET).bin
-	./to_bootloader.sh
+	bash ./to_bootloader.sh
 	@if [ "$$(uname -s)" = "Linux" ]; then \
 		sudo dfu-util -d 1EAF:0003 -a 2 -D $(BUILD_DIR)/$(TARGET).bin || true; \
 	else \
