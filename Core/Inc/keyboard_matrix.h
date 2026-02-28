@@ -10,7 +10,7 @@
 #define MATRIX_KEYS 64
 
 #ifndef DEBOUNCE
-#   define DEBOUNCE 20
+#   define DEBOUNCE 5
 #endif
 
 void matrix_init(void);
