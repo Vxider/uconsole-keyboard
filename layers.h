@@ -1,5 +1,5 @@
 // default layer
-LAYER(1);
+LAYER(1, "Main");
 
 TRACKBALL_SPEED(80);
 TRACKBALL_ACCELERATION(0.4f);
@@ -121,7 +121,7 @@ BIND_FN(BUTTON_ALT_LEFT, KEY_APPLICATION);
 
 
 // Game layer
-LAYER(2);
+LAYER(2, "Game");
 
 TRACKBALL_SPEED(125);
 

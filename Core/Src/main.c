@@ -163,7 +163,7 @@ void load_config(void)
 {
   uint8_t current_layer = 0;
 
-  #define LAYER(l) { current_layer = l - 1; }
+  #define LAYER(l, name) { current_layer = l - 1; }
   #define BIND(button, key) bind_button(current_layer, 0, button, key)
   #define BIND_FN(button, key) bind_button(current_layer, 1, button, key)
   #define TRACKBALL_SPEED(value) trackball_set_speed(current_layer, value)
@@ -173,7 +173,17 @@ void load_config(void)
   #define TRACKBALL_SCROLL_HORIZONTAL_SPEED(value) trackball_set_scroll_horizontal_speed(current_layer, value)
   #define TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION(value) trackball_set_scroll_horizontal_acceleration(current_layer, value)
 
-  #include "layers.h"  
+  #include "layers.h"
+
+  #undef LAYER
+  #undef BIND
+  #undef BIND_FN
+  #undef TRACKBALL_SPEED
+  #undef TRACKBALL_ACCELERATION
+  #undef TRACKBALL_SCROLL_VERTICAL_SPEED
+  #undef TRACKBALL_SCROLL_VERTICAL_ACCELERATION
+  #undef TRACKBALL_SCROLL_HORIZONTAL_SPEED
+  #undef TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION
 }
 
 /* USER CODE END 0 */
