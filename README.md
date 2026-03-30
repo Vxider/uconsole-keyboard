@@ -39,13 +39,13 @@ The firmware supports up to **10 keyboard layers**. A layer is a complete set of
 
 **Why is this useful?** You can have one layer for everyday typing, another optimized for gaming with gamepad button mappings and faster trackball, a third for a specific application, and so on — all without reflashing the firmware. Each layer can override any key, Fn combination, and trackball speed/acceleration independently.
 
-**How to switch layers:** press `LeftCtrl`+`RightCtrl`+`Number` (e.g. `LeftCtrl`+`RightCtrl`+`1` for layer 1, `LeftCtrl`+`RightCtrl`+`2` for layer 2, etc.). The keyboard backlight will blink to indicate the layer number.
+**How to switch layers:** press `LeftCtrl`+`RightCtrl`+`Number` (e.g. `LeftCtrl`+`RightCtrl`+`1` for layer 1, `LeftCtrl`+`RightCtrl`+`2` for layer 2, `LeftCtrl`+`RightCtrl`+`3` for layer 3, etc.). The keyboard backlight will blink to indicate the layer number.
 
 **Inheritance:** you only need to define what is *different* on each layer. Any key or setting not explicitly set on a layer is automatically inherited from layer 1. This means layer 2 can override just a handful of buttons and everything else will work exactly as on layer 1.
 
 #### Default bindings
 
-The firmware ships with two pre-configured layers. Layer 1 is the main layer with a standard QWERTY layout. Most keys are mapped as you would expect (Q→Q, W→W, etc.), so only the non-obvious bindings are listed below.
+The firmware ships with three pre-configured layers. Layer 1 is the main layer with a standard QWERTY layout. Most keys are mapped as you would expect (Q→Q, W→W, etc.), so only the non-obvious bindings are listed below.
 
 ##### Layer 1 — non-standard key assignments
 
@@ -87,14 +87,27 @@ The firmware ships with two pre-configured layers. Layer 1 is the main layer wit
 | Fn + Select | Print Screen | |
 | Fn + Start | Pause | |
 | Fn + Left Alt | Application/Menu | |
-| Fn + GP A | Mouse Forward | Useful in browsers and IDEs |
-| Fn + GP B | Mouse Back | Useful in browsers and IDEs |
-| Fn + GP X | Keypad * | Handy for file managers (MC, far2l) |
-| Fn + GP Y | Keypad / | Handy for file managers (MC, far2l) |
+| Fn + GP X | Mouse Forward | Useful in browsers and IDEs |
+| Fn + GP Y | Mouse Back | Useful in browsers and IDEs |
+| Fn + GP A | Keypad * | Handy for file managers (MC, far2l) |
+| Fn + GP B | Keypad / | Handy for file managers (MC, far2l) |
 
 ##### Layer 2 — Game layer
 
-Trackball speed is increased. The following buttons are remapped to virtual gamepad controls (Fn combinations are disabled). The advantage of using a virtual gamepad over keyboard keys is that there is **no limit on simultaneous button presses** — all gamepad buttons can be held at the same time, which is critical for gaming.
+Trackball speed is increased and **acceleration is disabled** on this layer (linear cursor movement). The four face buttons send **numeric keypad keys** in a numpad-like cluster (7 / 9 on the top row, 1 / 3 on the bottom), which pairs well with games or tools that expect keypad input. Fn combinations for these keys are **not** redefined here; they stay the same as on layer 1 unless you add `BIND_FN` overrides in `layers.h`.
+
+| Key | Action |
+|-----|--------|
+| GP A | Keypad 9 |
+| GP B | Keypad 7 |
+| GP X | Keypad 3 |
+| GP Y | Keypad 1 |
+
+All other keys on layer 2 are inherited from layer 1.
+
+##### Layer 3 — Gamepad layer
+
+Same trackball tuning as layer 2 (higher speed, no acceleration). The following buttons are remapped to **virtual gamepad** controls; Fn combinations for these keys are disabled on this layer. The advantage of a virtual gamepad over keyboard keys is that there is **no limit on simultaneous button presses** — all gamepad buttons can be held at the same time, which is critical for gaming.
 
 | Key | Action |
 |-----|--------|
@@ -106,7 +119,7 @@ Trackball speed is increased. The following buttons are remapped to virtual game
 | GP X | Gamepad Button 3 |
 | GP Y | Gamepad Button 4 |
 
-All other keys on layer 2 are inherited from layer 1.
+Switch to this layer with `LeftCtrl`+`RightCtrl`+`3`. All other keys on layer 3 are inherited from layer 1.
 
 #### Customizing layers
 
@@ -137,7 +150,7 @@ TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION(0.3f); // Horizontal scroll acceleratio
 **Adding a new layer** — just add a `LAYER(N)` block at the end of the file. You only need to specify the keys and settings that differ from layer 1:
 
 ```c
-LAYER(3);
+LAYER(4);
 TRACKBALL_SPEED(200);                   // Faster cursor on this layer
 BIND(BUTTON_SPACE, KEY_ENTER);          // Space produces Enter
 BIND_FN(BUTTON_SPACE, KEY_NONE);        // Disable Fn+Space on this layer
