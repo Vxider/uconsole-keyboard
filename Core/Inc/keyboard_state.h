@@ -5,11 +5,6 @@
 #include <stdbool.h>
 
 typedef struct {
-    bool deing;
-    uint32_t de_time;
-} KEY_DEB;
-
-typedef struct {
     // Current layer
     uint8_t layer;
 

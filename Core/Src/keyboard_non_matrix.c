@@ -5,10 +5,7 @@
 #include "stm32f1xx_hal.h"
 
 static uint32_t keys;
-static uint32_t keys_debouncing;
 static uint32_t keys_prev;
-
-KEY_DEB keypad_debouncing;
 
 // Pin definitions for keys
 static GPIO_TypeDef* keys_port[NON_MATRIX_KEYS] = {
@@ -40,21 +37,11 @@ uint8_t scan_non_matrix(void)
     
     for (int i = 0; i < NON_MATRIX_KEYS; i++) {
         s = read_io(i);
-        data |= s << i;
+        data |= (uint32_t)s << i;
     }
-    
-    if (keys_debouncing != data) {
-        keys_debouncing = data;
-        keypad_debouncing.deing = true;
-        keypad_debouncing.de_time = HAL_GetTick();
-    }
-    
-    if (keypad_debouncing.deing == true && 
-        ((HAL_GetTick() - keypad_debouncing.de_time) > KEY_DEBOUNCE)) {
-        keys = keys_debouncing;
-        keypad_debouncing.deing = false;
-    }
-    
+
+    keys = data;
+
     return 1;
 }
 
@@ -87,7 +74,5 @@ void non_matrix_task(void)
 void non_matrix_init(void)
 {
     // Keys are already configured as inputs with pullup in MX_GPIO_Init
-    keypad_debouncing.deing = false;
-    keypad_debouncing.de_time = 0;
 }
 

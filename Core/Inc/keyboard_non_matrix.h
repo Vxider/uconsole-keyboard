@@ -5,10 +5,6 @@
 #include <stdbool.h>
 #include "main.h"
 
-#ifndef KEY_DEBOUNCE
-#   define KEY_DEBOUNCE 5
-#endif
-
 #define NON_MATRIX_KEYS 17
 
 void non_matrix_init(void);

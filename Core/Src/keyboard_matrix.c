@@ -7,10 +7,7 @@
 #define KEYBOARD_PULL 0 // 0 for PULLDOWN
 
 static uint8_t matrix[MATRIX_ROWS];
-static uint8_t matrix_debouncing[MATRIX_COLS];
 static uint8_t matrix_prev[MATRIX_ROWS];
-
-KEY_DEB keyboard_debouncing;
 
 // Pin definitions for rows and cols
 static GPIO_TypeDef* matrix_rows_port[MATRIX_ROWS] = {
@@ -51,33 +48,33 @@ void matrix_init(void)
     
     for (uint8_t i = 0; i < MATRIX_ROWS; i++) {
         matrix[i] = 0;
-        matrix_debouncing[i] = 0;
         matrix_prev[i] = 0;
     }
-    
-    keyboard_debouncing.deing = false;
-    keyboard_debouncing.de_time = 0;
-    
+
     HAL_Delay(500);
 }
 
 static uint8_t matrix_scan(void)
 {
     uint8_t data;
-    
+
+    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+        matrix[row] = 0;
+    }
+
     for (int col = 0; col < MATRIX_COLS; col++) {
         data = 0;
-        
+
 #if KEYBOARD_PULL == 1
         HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_RESET);
 #else
         HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_SET);
 #endif
-        
+
         // Small delay for signal stabilization
         HAL_Delay(1);
-        
-        data = (
+
+        data = (uint8_t)(
             (read_kbd_io(0) << 0) |
             (read_kbd_io(1) << 1) |
             (read_kbd_io(2) << 2) |
@@ -87,31 +84,20 @@ static uint8_t matrix_scan(void)
             (read_kbd_io(6) << 6) |
             (read_kbd_io(7) << 7)
         );
-        
+
 #if KEYBOARD_PULL == 1
         HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_SET);
 #else
         HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_RESET);
 #endif
-        
-        if (matrix_debouncing[col] != data) {
-            matrix_debouncing[col] = data;
-            keyboard_debouncing.deing = true;
-            keyboard_debouncing.de_time = HAL_GetTick();
-        }
-    }
-    
-    if (keyboard_debouncing.deing == true && 
-        ((HAL_GetTick() - keyboard_debouncing.de_time) > DEBOUNCE)) {
+
         for (int row = 0; row < MATRIX_ROWS; row++) {
-            matrix[row] = 0;
-            for (int col = 0; col < MATRIX_COLS; col++) {
-                matrix[row] |= ((matrix_debouncing[col] & (1 << row) ? 1 : 0) << col);
+            if (data & (1 << row)) {
+                matrix[row] |= (uint8_t)(1 << col);
             }
         }
-        keyboard_debouncing.deing = false;
     }
-    
+
     return 1;
 }
 
