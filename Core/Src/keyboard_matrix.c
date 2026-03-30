@@ -1,8 +1,9 @@
+#include "main.h"
 #include "keyboard_matrix.h"
 #include "keyboard_state.h"
 #include "keymaps.h"
-#include "main.h"
 #include "stm32f1xx_hal.h"
+#include <assert.h>
 
 #define KEYBOARD_PULL 0 // 0 for PULLDOWN
 
@@ -44,13 +45,32 @@ static uint8_t read_kbd_io(uint8_t row)
 
 static void next_column(void)
 {
-    // this is so wrong...
-#if KEYBOARD_PULL == 1
-    HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_SET);
-#else
-    HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_RESET);
-#endif
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_TypeDef* port = matrix_cols_port[0];
+
     acive_column = (acive_column + 1) % MATRIX_COLS;
+
+    // set other column pins as input
+    for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+        if (col == acive_column) continue;
+        GPIO_InitStruct.Pin |= matrix_cols_pin[col];
+        assert(port == matrix_cols_port[col]);
+    }
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+#if KEYBOARD_PULL == 1
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+#else
+        GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+#endif
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;    
+    HAL_GPIO_Init(port, &GPIO_InitStruct);
+
+    // set the new column pin as output
+    GPIO_InitStruct.Pin = matrix_cols_pin[acive_column];
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(matrix_cols_port[acive_column], &GPIO_InitStruct);
 #if KEYBOARD_PULL == 1
     HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_RESET);
 #else
