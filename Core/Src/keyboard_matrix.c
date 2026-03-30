@@ -8,6 +8,7 @@
 
 static uint8_t matrix[MATRIX_ROWS];
 static uint8_t matrix_prev[MATRIX_ROWS];
+static uint8_t acive_column;
 
 // Pin definitions for rows and cols
 static GPIO_TypeDef* matrix_rows_port[MATRIX_ROWS] = {
@@ -41,6 +42,22 @@ static uint8_t read_kbd_io(uint8_t row)
 #endif
 }
 
+static void next_column(void)
+{
+    // this is so wrong...
+#if KEYBOARD_PULL == 1
+    HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_SET);
+#else
+    HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_RESET);
+#endif
+    acive_column = (acive_column + 1) % MATRIX_COLS;
+#if KEYBOARD_PULL == 1
+    HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_RESET);
+#else
+    HAL_GPIO_WritePin(matrix_cols_port[acive_column], matrix_cols_pin[acive_column], GPIO_PIN_SET);
+#endif
+}
+
 void matrix_init(void)
 {
     // Columns are already configured as outputs in MX_GPIO_Init
@@ -51,54 +68,9 @@ void matrix_init(void)
         matrix_prev[i] = 0;
     }
 
+    next_column();
+
     HAL_Delay(500);
-}
-
-static uint8_t matrix_scan(void)
-{
-    uint8_t data;
-
-    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-        matrix[row] = 0;
-    }
-
-    for (int col = 0; col < MATRIX_COLS; col++) {
-        data = 0;
-
-#if KEYBOARD_PULL == 1
-        HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_RESET);
-#else
-        HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_SET);
-#endif
-
-        // Small delay for signal stabilization
-        HAL_Delay(1);
-
-        data = (uint8_t)(
-            (read_kbd_io(0) << 0) |
-            (read_kbd_io(1) << 1) |
-            (read_kbd_io(2) << 2) |
-            (read_kbd_io(3) << 3) |
-            (read_kbd_io(4) << 4) |
-            (read_kbd_io(5) << 5) |
-            (read_kbd_io(6) << 6) |
-            (read_kbd_io(7) << 7)
-        );
-
-#if KEYBOARD_PULL == 1
-        HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_SET);
-#else
-        HAL_GPIO_WritePin(matrix_cols_port[col], matrix_cols_pin[col], GPIO_PIN_RESET);
-#endif
-
-        for (int row = 0; row < MATRIX_ROWS; row++) {
-            if (data & (1 << row)) {
-                matrix[row] |= (uint8_t)(1 << col);
-            }
-        }
-    }
-
-    return 1;
 }
 
 static bool matrix_is_on(uint8_t row, uint8_t col)
@@ -106,50 +78,31 @@ static bool matrix_is_on(uint8_t row, uint8_t col)
     return (matrix[row] & (1 << col));
 }
 
-static uint8_t matrix_get_row(uint8_t row)
+static uint8_t matrix_scan(void)
 {
-    return matrix[row];
-}
-
-static void matrix_press(uint8_t row, uint8_t col)
-{
-    if (matrix_is_on(row, col) == true) {
-        matrix_action(row, col, KEY_PRESSED);
+    for (int row = 0; row < MATRIX_ROWS; row++) {
+        if (read_kbd_io(row)) {
+            if (!matrix_is_on(row, acive_column)) {
+                matrix[row] |= (uint8_t)(1 << acive_column);
+                matrix_action(row, acive_column, KEY_PRESSED);
+                keyboard_state.last_activity_time = HAL_GetTick();
+            }
+        } else {
+            if (matrix_is_on(row, acive_column)) {
+                matrix[row] &= ~(uint8_t)(1 << acive_column);
+                matrix_action(row, acive_column, KEY_RELEASED);
+                keyboard_state.last_activity_time = HAL_GetTick();
+            }
+        }
     }
-}
 
-static void matrix_release(uint8_t row, uint8_t col)
-{
-    if (matrix_is_on(row, col) == false) {
-        matrix_action(row, col, KEY_RELEASED);
-    }
+    // Set the next column as active, for the next scan
+    next_column();
+
+    return 1;
 }
 
 void matrix_task(void)
 {
-    uint8_t matrix_row = 0;
-    uint8_t matrix_change = 0;
-    uint8_t pressed = 0;
-    
-    matrix_scan();
-    
-    for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
-        matrix_row = matrix_get_row(r);
-        matrix_change = matrix_row ^ matrix_prev[r];
-        if (matrix_change) {
-            uint8_t col_mask = 1;
-            for (uint8_t c = 0; c < MATRIX_COLS; c++, col_mask <<= 1) {
-                if (matrix_change & col_mask) {
-                    pressed = (matrix_row & col_mask);
-                    if (pressed != 0) {
-                        matrix_press(r, c);
-                    } else {
-                        matrix_release(r, c);
-                    }
-                    matrix_prev[r] ^= col_mask;
-                    keyboard_state.last_activity_time = HAL_GetTick();
-                }
-            }
-        }
-    }
+    matrix_scan();    
 }
