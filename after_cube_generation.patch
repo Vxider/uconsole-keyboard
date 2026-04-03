@@ -1,0 +1,79 @@
+diff --git a/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc/usbd_customhid.h b/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc/usbd_customhid.h
+index 928f90a..3756c56 100644
+--- a/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc/usbd_customhid.h
++++ b/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc/usbd_customhid.h
+@@ -42,10 +42,14 @@ extern "C" {
+   * @{
+   */
+ #define CUSTOM_HID_EPIN_ADDR                 0x81U
+-#define CUSTOM_HID_EPIN_SIZE                 0x02U
++/* WARNING: STM32CubeMX generates 0x02U for CUSTOM_HID_EPIN_SIZE, but it should be 0x09! */
++/* Always revert this to 0x09U if you use STM32CubeMX to regenerate the files. */
++#define CUSTOM_HID_EPIN_SIZE                 0x09U
+ 
+ #define CUSTOM_HID_EPOUT_ADDR                0x01U
+-#define CUSTOM_HID_EPOUT_SIZE                0x02U
++/* WARNING: STM32CubeMX generates 0x02U for CUSTOM_HID_EPOUT_SIZE, but it should be 0x04! */
++/* Always revert this to 0x04U if you use STM32CubeMX to regenerate the files. */
++#define CUSTOM_HID_EPOUT_SIZE                0x04U
+ 
+ #define USB_CUSTOM_HID_CONFIG_DESC_SIZ       41U
+ #define USB_CUSTOM_HID_DESC_SIZ              9U
+@@ -96,7 +100,7 @@ typedef struct _USBD_CUSTOM_HID_Itf
+   uint8_t                  *pReport;
+   int8_t (* Init)(void);
+   int8_t (* DeInit)(void);
+-  int8_t (* OutEvent)(uint8_t event_idx, uint8_t state);
++  int8_t (* OutEvent)(uint8_t event_idx, uint8_t* state);
+ 
+ } USBD_CUSTOM_HID_ItfTypeDef;
+ 
+@@ -164,3 +168,4 @@ uint8_t  USBD_CUSTOM_HID_RegisterInterface(USBD_HandleTypeDef   *pdev,
+   */
+ 
+ /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
++
+diff --git a/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c b/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c
+index 108f04c..52ba5b5 100644
+--- a/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c
++++ b/Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c
+@@ -640,7 +640,7 @@ static uint8_t  USBD_CUSTOM_HID_DataOut(USBD_HandleTypeDef *pdev,
+   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassData;
+ 
+   ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf[0],
+-                                                            hhid->Report_buf[1]);
++                                                            &hhid->Report_buf[1]);
+ 
+   USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR, hhid->Report_buf,
+                          USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
+@@ -661,7 +661,7 @@ static uint8_t USBD_CUSTOM_HID_EP0_RxReady(USBD_HandleTypeDef *pdev)
+   if (hhid->IsReportAvailable == 1U)
+   {
+     ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf[0],
+-                                                              hhid->Report_buf[1]);
++                                                              &hhid->Report_buf[1]);
+     hhid->IsReportAvailable = 0U;
+   }
+ 
+diff --git a/USB_DEVICE/App/usbd_custom_hid_if.c b/USB_DEVICE/App/usbd_custom_hid_if.c
+index c9852ee..753adcf 100644
+--- a/USB_DEVICE/App/usbd_custom_hid_if.c
++++ b/USB_DEVICE/App/usbd_custom_hid_if.c
+@@ -260,7 +260,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
+ 
+ static int8_t CUSTOM_HID_Init_FS(void);
+ static int8_t CUSTOM_HID_DeInit_FS(void);
+-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state);
++static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state);
+ 
+ /**
+   * @}
+@@ -309,7 +309,7 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
+   * @param  state: Event state
+   * @retval USBD_OK if all operations are OK else USBD_FAIL
+   */
+-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state)
++static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state)
+ {
+   /* USER CODE BEGIN 6 */
+   if (event_idx == 5U)
