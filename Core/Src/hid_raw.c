@@ -31,7 +31,7 @@ void rawhid_on_recv(uint8_t* data) {
 }
 
 void rawhid_send() {
-    uint8_t data[3] = {
+    uint8_t data[4] = {
         layer_get(),
         keyboard_state.fn_lock ? (1 << KEYBOARD_OPTION_FN_LOCK) : 0,
         keyboard_state.double_p_to_brace_left ? (1 << KEYBOARD_OPTION_DOUBLE_P_TO_BRACE_LEFT) : 0,
