@@ -19,7 +19,6 @@ typedef enum {
 
 static volatile int8_t distances[AXIS_NUM];
 static RateMeter rateMeter[AXIS_NUM];
-static RateMeter wheelRate[AXIS_NUM];
 #if GLIDER_ENABLED
 static Glider glider[AXIS_NUM];
 #else
@@ -93,10 +92,8 @@ void trackball_interrupt_x_neg(void)
 {
     __disable_irq();
     distances[AXIS_X] -= 1;
-    if (asWheel) {
-        ratemeter_onInterrupt(&wheelRate[AXIS_X]);
-    } else {
-        ratemeter_onInterrupt(&rateMeter[AXIS_X]);
+    ratemeter_onInterrupt(&rateMeter[AXIS_X]);
+    if (!asWheel) {
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
@@ -122,10 +119,8 @@ void trackball_interrupt_x_pos(void)
 {
     __disable_irq();
     distances[AXIS_X] += 1;
-    if (asWheel) {
-        ratemeter_onInterrupt(&wheelRate[AXIS_X]);
-    } else {
-        ratemeter_onInterrupt(&rateMeter[AXIS_X]);
+    ratemeter_onInterrupt(&rateMeter[AXIS_X]);
+    if (!asWheel) {
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
@@ -151,10 +146,8 @@ void trackball_interrupt_y_neg(void)
 {
     __disable_irq();
     distances[AXIS_Y] -= 1;
-    if (asWheel) {
-        ratemeter_onInterrupt(&wheelRate[AXIS_Y]);
-    } else {
-        ratemeter_onInterrupt(&rateMeter[AXIS_Y]);
+    ratemeter_onInterrupt(&rateMeter[AXIS_Y]);
+    if (!asWheel) {
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
@@ -180,10 +173,8 @@ void trackball_interrupt_y_pos(void)
 {
     __disable_irq();
     distances[AXIS_Y] += 1;
-    if (asWheel) {
-        ratemeter_onInterrupt(&wheelRate[AXIS_Y]);
-    } else {
-        ratemeter_onInterrupt(&rateMeter[AXIS_Y]);
+    ratemeter_onInterrupt(&rateMeter[AXIS_Y]);
+    if (!asWheel) {
         const float rx = ratemeter_rate(&rateMeter[AXIS_X]);
         const float ry = ratemeter_rate(&rateMeter[AXIS_Y]);
         const float rate = hypot_f(rx, ry);
@@ -235,23 +226,16 @@ void trackball_task(void)
     
     // Reset wheel buffers only when switching modes
     if (asWheel != lastWheelMode) {
-        if (asWheel) {
-            ratemeter_expire(&rateMeter[AXIS_X]);
-            ratemeter_expire(&rateMeter[AXIS_Y]);
-            ratemeter_init(&wheelRate[AXIS_X]);
-            ratemeter_init(&wheelRate[AXIS_Y]);
-            wheelBuffer = 0;
-            hWheelBuffer = 0;
-        } else {
-            ratemeter_expire(&wheelRate[AXIS_X]);
-            ratemeter_expire(&wheelRate[AXIS_Y]);
-        }
+        ratemeter_init(&rateMeter[AXIS_X]);
+        ratemeter_init(&rateMeter[AXIS_Y]);
+        wheelBuffer = 0;
+        hWheelBuffer = 0;
         lastWheelMode = asWheel;
     }
     
     if (asWheel) {        
-        ratemeter_tick(&wheelRate[AXIS_X], delta);
-        ratemeter_tick(&wheelRate[AXIS_Y], delta);
+        ratemeter_tick(&rateMeter[AXIS_X], delta);
+        ratemeter_tick(&rateMeter[AXIS_Y], delta);
 
         // Vertical scroll (wheel) - Y axis
         wheelBuffer += distances[AXIS_Y];
@@ -260,7 +244,7 @@ void trackball_task(void)
         w = clamp_int8(steps_v);
         wheelBuffer -= (int16_t)w * div_v;
         if (w != 0) {
-            const float scrollRate = ratemeter_rate(&wheelRate[AXIS_Y]);
+            const float scrollRate = ratemeter_rate(&rateMeter[AXIS_Y]);
             w = applyScrollAcceleration(
                 w,
                 scrollRate,
@@ -275,7 +259,7 @@ void trackball_task(void)
         hw = clamp_int8(steps_h);
         hWheelBuffer -= (int16_t)hw * div_h;
         if (hw != 0) {
-            const float panRate = ratemeter_rate(&wheelRate[AXIS_X]);
+            const float panRate = ratemeter_rate(&rateMeter[AXIS_X]);
             hw = applyScrollAcceleration(
                 hw,
                 panRate,
@@ -400,8 +384,6 @@ void trackball_init(void)
     // Hall sensors are already configured as EXTI in MX_GPIO_Init
     ratemeter_init(&rateMeter[AXIS_X]);
     ratemeter_init(&rateMeter[AXIS_Y]);
-    ratemeter_init(&wheelRate[AXIS_X]);
-    ratemeter_init(&wheelRate[AXIS_Y]);
 #if GLIDER_ENABLED
     glider_init(&glider[AXIS_X]);
     glider_init(&glider[AXIS_Y]);
