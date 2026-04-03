@@ -31,11 +31,10 @@ void rawhid_on_recv(uint8_t* data) {
 }
 
 void rawhid_send() {
-    uint8_t data[4] = {
+    uint8_t data[3] = {
         layer_get(),
         keyboard_state.fn_lock ? (1 << KEYBOARD_OPTION_FN_LOCK) : 0,
-        keyboard_state.double_p_to_brace_left ? (1 << KEYBOARD_OPTION_DOUBLE_P_TO_BRACE_LEFT) : 0,
-        0x00  // Reserved
+        keyboard_state.double_p_to_brace_left ? (1 << KEYBOARD_OPTION_DOUBLE_P_TO_BRACE_LEFT) : 0
     };
     Custom_HID_SendVendorValue(data);
 }
