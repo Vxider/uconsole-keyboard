@@ -10,6 +10,7 @@ build/
 *.su
 *.idb
 *.pdb
+*.pyc
 
 # IDE - Visual Studio Code / Cursor
 .vscode/

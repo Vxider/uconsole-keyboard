@@ -127,8 +127,10 @@ All layer configuration lives in a single file: `layers.h`. To change bindings o
 
 **Basic syntax:**
 
+Each layer is opened with **`LAYER(number, "Name")`**: the number is the layer index (1–10), and **`"Name"`** is a short human-readable label (for example `"Main"`, `"Game"`, `"Gamepad"`).
+
 ```c
-LAYER(1);                               // Start defining layer 1
+LAYER(1, "Main");                       // Start defining layer 1
 
 BIND(BUTTON_Q, KEY_Q);                  // Q key produces 'Q'
 BIND(BUTTON_GAMEPAD_A, MOUSE_LEFT);     // GP A button produces mouse left click
@@ -147,10 +149,10 @@ TRACKBALL_SCROLL_HORIZONTAL_SPEED(100);       // Horizontal scroll speed
 TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION(0.3f); // Horizontal scroll acceleration
 ```
 
-**Adding a new layer** — just add a `LAYER(N)` block at the end of the file. You only need to specify the keys and settings that differ from layer 1:
+**Adding a new layer** — just add a `LAYER(N, "Name")` block at the end of the file. You only need to specify the keys and settings that differ from layer 1:
 
 ```c
-LAYER(4);
+LAYER(4, "Custom");
 TRACKBALL_SPEED(200);                   // Faster cursor on this layer
 BIND(BUTTON_SPACE, KEY_ENTER);          // Space produces Enter
 BIND_FN(BUTTON_SPACE, KEY_NONE);        // Disable Fn+Space on this layer
@@ -198,7 +200,16 @@ This hardware design ensures that modifier keys (Shift, Ctrl, Alt) and gaming co
 
 ## Building
 
-Simply use `make`:
+### Prerequisites
+
+On **Debian**, **Ubuntu**, and most derivatives, install everything in one go like this:
+
+```bash
+sudo apt update
+sudo apt install build-essential gcc-arm-none-eabi dfu-util
+```
+
+### Build and flash
 
 ```bash
 # Build the firmware
@@ -207,19 +218,23 @@ make all
 # Clean build files
 make clean
 
-# Flash the firmware
+# First install from the factory keyboard firmware (run once)
+make first_flash
+
+# Later firmware updates
 make flash
 ```
 
-**Important for first-time flashing:**
+Use **`make first_flash`** the **first** time you install this firmware on a keyboard that still runs the original uConsole firmware. After that, use **`make flash`** for updates.
 
-For the **first firmware flash**, you need to use one of these methods:
 
-1. **Official flashing script**: Use the official ClockworkPi flashing script from [uconsole_keyboard_flash.tar.gz](https://github.com/clockworkpi/uConsole/raw/master/Bin/uconsole_keyboard_flash.tar.gz) (replace `uconsole_keyboard.ino.bin` with the new firmware)
+## Unbricking and recovery
 
-2. **Hardware switch**: Use the switch on the back of the keyboard to switch it to update/flashing mode
+For any of the steps below, you need a way to run shell commands on the host while the uConsole keyboard module may be unusable (DFU mode, reset, or other failure). Besides plugging in an **external USB keyboard**, you can use **SSH** from another machine on the network if the uConsole is already reachable and you can log in.
 
-After the first flash, you can use `make flash`. The command will wait for you to manually enter DFU mode by pressing Fn+X combination on the keyboard.
+1. **Emergency software reset to bootloader** — If **this firmware is already running** but you need the bootloader (for example the host cannot drive the normal HID reboot path), hold **Left Ctrl** and **Right Ctrl**, then **press the trackball** (trackball click). The firmware handles this before any layer mapping in `non_matrix_action()` and calls `jump_to_bootloader()`, which arms the independent watchdog with a very short timeout and resets the MCU into the bootloader. This is intentionally hard to trigger by accident (both Ctrl keys plus a dedicated non-matrix key).
+
+2. **Hardware switch** — If the MCU is not running this firmware, or the software method above does not help, use the switch on the **back of the keyboard module** to force **update / bootloader (DFU)** mode so the host sees the Maple/STM32 DFU device. Then run `make flash` or `make first_flash` as appropriate (or invoke `dfu-util` with the same options as in the Makefile). This works even when application firmware is missing or broken, as long as the bootloader is intact.
 
 
 ## License

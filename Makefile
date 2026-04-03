@@ -220,6 +220,17 @@ clean:
 	-rm -fR $(BUILD_DIR)
 
 #######################################
+# flash the device for the first time
+#######################################
+first_flash: $(BUILD_DIR)/$(TARGET).bin
+	bash ./to_bootloader_original.sh
+	@if [ "$$(uname -s)" = "Linux" ]; then \
+		sudo dfu-util -d 1EAF:0003 -a 2 -D $(BUILD_DIR)/$(TARGET).bin || true; \
+	else \
+		dfu-util -d 1EAF:0003 -a 2 -D $(BUILD_DIR)/$(TARGET).bin || true; \
+	fi 
+
+#######################################
 # flash the device
 #######################################
 flash: $(BUILD_DIR)/$(TARGET).bin
