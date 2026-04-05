@@ -105,6 +105,8 @@ extern USBD_CUSTOM_HID_ItfTypeDef USBD_CustomHID_fops_FS;
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
 void hid_wait_for_usb_idle(void);
+USBD_StatusTypeDef hid_send_report(USBD_HandleTypeDef  *pdev, uint8_t *report, uint16_t len, uint8_t wait);
+void hid_wait_configured(void);
 /* USER CODE END EXPORTED_FUNCTIONS */
 
 /**

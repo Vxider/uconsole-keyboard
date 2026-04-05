@@ -4,6 +4,7 @@
 #include "usbd_custom_hid_if.h"
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
+static uint8_t sending_scheduled = 0;
 
 void hid_vendor_on_recv(uint8_t* data) {
     if (data[0] == 0xFE && data[1] == 0x55 && data[2] == 0xAA) {
@@ -29,10 +30,10 @@ void hid_vendor_on_recv(uint8_t* data) {
         }
     }
 
-    hid_vendor_send();
+    sending_scheduled = 1;
 }
 
-USBD_StatusTypeDef hid_vendor_send(void) {
+static USBD_StatusTypeDef hid_vendor_send_state(void) {
     uint8_t data[4] = {
         0x05,
         layer_get(),
@@ -40,6 +41,18 @@ USBD_StatusTypeDef hid_vendor_send(void) {
         keyboard_state.double_p_to_brace_left ? (1 << KEYBOARD_OPTION_DOUBLE_P_TO_BRACE_LEFT) : 0
     };
 
-    hid_wait_for_usb_idle();
-    return USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, data, sizeof(data));
+    return hid_send_report(&hUsbDeviceFS, data, sizeof(data), 1);
+}
+
+void hid_vendor_schedule_send(void) {
+    sending_scheduled = 1;
+}
+
+void hid_vendor_task(void) {
+    if (sending_scheduled) {
+        USBD_StatusTypeDef result = hid_vendor_send_state();
+        if (result == USBD_OK) {
+            sending_scheduled = 0;
+        }
+    }
 }

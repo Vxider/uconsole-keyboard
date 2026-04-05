@@ -96,7 +96,7 @@ void trackball_interrupt_y_pos(void)
     ratemeter_onInterrupt(&ratemeter[AXIS_Y]);
 }
 
-void trackball_task(void)
+USBD_StatusTypeDef trackball_task(void)
 {
     int8_t x = 0, y = 0, w = 0, hw = 0;
     int8_t move_delta[AXIS_NUM];
@@ -107,7 +107,7 @@ void trackball_task(void)
     as_wheel = keyboard_state.fn;
 
     if (time_delta == 0) {
-        return; // Skip first iteration to get proper delta next time
+        return USBD_OK; // Skip first iteration to get proper delta next time
     }
     
     ATOM_MOVE(move_delta[AXIS_X], distances[AXIS_X]);
@@ -166,16 +166,20 @@ void trackball_task(void)
     }
 
     if (x != 0 || y != 0 || w != 0 || hw != 0) {
-        if (hid_mouse_move(x, y, w, hw) == USBD_OK) {
+        #if KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL
+        keyboard_state.last_activity_time = HAL_GetTick();
+        #endif        
+        USBD_StatusTypeDef result = hid_mouse_move(x, y, w, hw);
+        if (result == USBD_OK) {
             pointer_buffer[AXIS_X] -= x;
             pointer_buffer[AXIS_Y] -= y;
             wheel_buffer[AXIS_X] -= hw;
             wheel_buffer[AXIS_Y] -= w;
         }
-        #if KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL
-        keyboard_state.last_activity_time = HAL_GetTick();
-        #endif
+        return result;
     }
+
+    return USBD_OK;
 }
 
 void trackball_load_layer_config(void)

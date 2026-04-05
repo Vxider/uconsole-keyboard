@@ -30,6 +30,7 @@
 #include "hid_mouse.h"
 #include "hid_consumer.h"
 #include "hid_gamepad.h"
+#include "hid_vendor.h"
 #include "prec_time.h"
 /* USER CODE END Includes */
 
@@ -267,8 +268,8 @@ int main(void)
       HAL_Delay(50);
     }
   }
-  
-  hid_wait_for_usb_idle();
+
+  hid_wait_configured();
 
   /* USER CODE END 2 */
 
@@ -310,6 +311,7 @@ int main(void)
     non_matrix_task();
     trackball_task();
     hid_gamepad_task();
+    hid_vendor_task();
 
     // Repeat the loop every 500 microseconds
     while (prec_time_get_us() - time_us < 500) {

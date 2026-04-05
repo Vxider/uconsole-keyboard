@@ -44,7 +44,7 @@ static void do_the_key(uint16_t k, uint8_t mode)
         case SK_KEYBOARD_LOCK:
             if (mode == KEY_PRESSED) {
                 fn_lock_set(!keyboard_state.fn_lock);
-                hid_vendor_send();
+                hid_vendor_schedule_send();
             }
             break;
 
@@ -179,25 +179,25 @@ void matrix_action(uint8_t row, uint8_t col, uint8_t mode)
         switch (addr)
         {
             case BUTTON_1:
-                layer_set(0); hid_vendor_send(); return;
+                layer_set(0); hid_vendor_schedule_send(); return;
             case BUTTON_2:
-                layer_set(1); hid_vendor_send(); return;
+                layer_set(1); hid_vendor_schedule_send(); return;
             case BUTTON_3:
-                layer_set(2); hid_vendor_send(); return;
+                layer_set(2); hid_vendor_schedule_send(); return;
             case BUTTON_4:
-                layer_set(3); hid_vendor_send(); return;
+                layer_set(3); hid_vendor_schedule_send(); return;
             case BUTTON_5:
-                layer_set(4); hid_vendor_send(); return;
+                layer_set(4); hid_vendor_schedule_send(); return;
             case BUTTON_6:
-                layer_set(5); hid_vendor_send(); return;
+                layer_set(5); hid_vendor_schedule_send(); return;
             case BUTTON_7:
-                layer_set(6); hid_vendor_send(); return;
+                layer_set(6); hid_vendor_schedule_send(); return;
             case BUTTON_8:
-                layer_set(7); hid_vendor_send(); return;
+                layer_set(7); hid_vendor_schedule_send(); return;
             case BUTTON_9:
-                layer_set(8); hid_vendor_send(); return;
+                layer_set(8); hid_vendor_schedule_send(); return;
             case BUTTON_0:
-                layer_set(9); hid_vendor_send(); return;
+                layer_set(9); hid_vendor_schedule_send(); return;
             default:
                 break;
         }

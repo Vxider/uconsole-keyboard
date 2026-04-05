@@ -327,19 +327,54 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state)
 /* USER CODE BEGIN 7 */
 void hid_wait_for_usb_idle(void)
 {
-    /* Wait until IN transfer completes (DataIn sets state to IDLE).
-     * Volatile read: ISR updates state; without it, -O3 can cache and spin forever. */
-    USBD_CUSTOM_HID_HandleTypeDef *hhid =
-        (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
-    if (hhid == NULL) {
-        return;
-    }
-    volatile CUSTOM_HID_StateTypeDef *st =
-        (volatile CUSTOM_HID_StateTypeDef *)&hhid->state;
-    while (*st != CUSTOM_HID_IDLE) {
-      /* wait for IDLE */
-    }
+  /* Wait until IN transfer completes (DataIn sets state to IDLE).
+   * Volatile read: ISR updates state; without it, -O3 can cache and spin forever. */
+  USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
+  if (hhid == NULL) {
+      return;
+  }
+  volatile CUSTOM_HID_StateTypeDef *st = (volatile CUSTOM_HID_StateTypeDef *)&hhid->state;
+  while (*st != CUSTOM_HID_IDLE) {
+    __WFI();
+  }
 }
+
+USBD_StatusTypeDef hid_send_report(USBD_HandleTypeDef  *pdev,
+  uint8_t *report,
+  uint16_t len,
+  uint8_t wait)
+{
+  USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassData;
+
+  if (pdev->dev_state != USBD_STATE_CONFIGURED) {
+    return USBD_FAIL;
+  }
+  if (wait) {
+    hid_wait_for_usb_idle();
+  }
+  if (hhid->state != CUSTOM_HID_IDLE) {
+    return USBD_BUSY;
+  }
+  hhid->state = CUSTOM_HID_BUSY;
+  if (USBD_LL_Transmit(pdev, CUSTOM_HID_EPIN_ADDR, report, len) != USBD_OK)
+  {
+    hhid->state = CUSTOM_HID_IDLE;
+    return USBD_FAIL;
+  }
+  return USBD_OK;
+}
+
+void hid_wait_configured(void)
+{
+  USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
+  if (hhid == NULL) {
+    return;
+  }
+  while (hhid->state != CUSTOM_HID_IDLE) {
+    __WFI();
+  }
+}
+
 /* USER CODE END 7 */
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */

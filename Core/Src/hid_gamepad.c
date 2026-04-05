@@ -27,11 +27,13 @@ USBD_StatusTypeDef hid_gamepad_task(void)
     }
 
     uint8_t gamepad_report[4] = {0x04, (uint8_t)gamepad_x, (uint8_t)gamepad_y, gamepad_buttons};
-    if (USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, gamepad_report, 4) == USBD_OK) {
+    USBD_StatusTypeDef result = hid_send_report(&hUsbDeviceFS, gamepad_report, 4, 0);
+    if (result == USBD_OK) {
         gamepad_buttons_last = gamepad_buttons;
         gamepad_x_last = gamepad_x;
         gamepad_y_last = gamepad_y;
     }
+    return result;
 }
 
 void hid_gamepad_set_axes(int8_t x, int8_t y)
@@ -120,6 +122,14 @@ void hid_gamepad_button(uint16_t button, uint8_t mode)
             button_bit = 6; break;
         case GAMEPAD_BUTTON_8: // GAMEPAD_BUTTON_8
             button_bit = 7; break;
+    }
+
+    if (button_bit != -1) {
+        if (is_pressed) {
+                gamepad_buttons |= (1 << button_bit);
+        } else {
+            gamepad_buttons &= ~(1 << button_bit);
+        }
     }
 
     hid_gamepad_task();

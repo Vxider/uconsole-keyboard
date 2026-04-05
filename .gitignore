@@ -17,6 +17,7 @@ build/
 
 # IDE - clangd
 .clangd
+compile_commands.json
 
 # IDE - Eclipse
 .metadata

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "main.h"
+#include "usbd_custom_hid_if.h"
 
 #define DEFAULT_TRACKBALL_SPEED 100
 #define DEFAULT_TRACKBALL_ACCELERATION 0.2f
@@ -12,7 +13,7 @@
 #define DEFAULT_TRACKBALL_SCROLL_HORIZONTAL_ACCELERATION 0.3f
 
 void trackball_init(void);
-void trackball_task(void);
+USBD_StatusTypeDef trackball_task(void);
 void trackball_interrupt_x_neg(void);
 void trackball_interrupt_x_pos(void);
 void trackball_interrupt_y_neg(void);
