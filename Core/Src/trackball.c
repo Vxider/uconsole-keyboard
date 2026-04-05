@@ -9,6 +9,7 @@
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx.h"
+#include "usbd_custom_hid_if.h"
 #include <math.h>
 #include <stdint.h>
 
@@ -21,9 +22,9 @@ typedef enum {
 static volatile int8_t distances[AXIS_NUM];
 static RateMeter ratemeter[AXIS_NUM];
 static float pointer_buffer[AXIS_NUM];
-static int16_t wheel_buffer[AXIS_NUM]; /* Accumulates encoder ticks; int16_t to avoid overflow */
+static float wheel_buffer[AXIS_NUM]; /* Accumulates encoder ticks; int16_t to avoid overflow */
 static bool as_wheel = false;
-static bool lastWheelMode = false;
+static bool last_wheel_node = false;
 
 // Trackball configuration parameters for each layer
 static float config_acceleration_exponent[LAYERS_NUM] = {0};
@@ -113,7 +114,7 @@ void trackball_task(void)
     ATOM_MOVE(move_delta[AXIS_Y], distances[AXIS_Y]);
 
     // Reset when switching modes
-    if (as_wheel != lastWheelMode) {
+    if (as_wheel != last_wheel_node) {
         ratemeter_init(&ratemeter[AXIS_X]);
         ratemeter_init(&ratemeter[AXIS_Y]);
         wheel_buffer[AXIS_X] = 0;
@@ -122,7 +123,7 @@ void trackball_task(void)
         pointer_buffer[AXIS_Y] = 0;
         move_delta[AXIS_X] = 0;
         move_delta[AXIS_Y] = 0;
-        lastWheelMode = as_wheel;
+        last_wheel_node = as_wheel;
     }
 
     ratemeter_tick(&ratemeter[AXIS_X], time_delta);
@@ -130,38 +131,22 @@ void trackball_task(void)
 
     if (as_wheel) {        
         // Vertical scroll (wheel) - Y axis
-        wheel_buffer[AXIS_Y] += move_delta[AXIS_Y];
-        const int div_v = (scroll_vertical_denominator > 0) ? scroll_vertical_denominator : 1;
-        const int32_t steps_v = wheel_buffer[AXIS_Y] / div_v;
-        w = clamp_int8(steps_v);
-        wheel_buffer[AXIS_Y] -= (int16_t)w * div_v;
-        if (w != 0) {
-            w = apply_acceleration(
-                w,
-                rate[AXIS_Y],
-                scroll_vertical_exponent,
-                scroll_vertical_divisor);
-        }
-        #if !VERTICAL_SCROLL_INVERTED
-        w = -w;
-        #endif
+        wheel_buffer[AXIS_Y] += apply_acceleration(
+            (int32_t)move_delta[AXIS_Y],
+            rate[AXIS_Y],
+            scroll_vertical_exponent,
+            scroll_vertical_divisor) 
+            * (VERTICAL_SCROLL_INVERTED ? 1 : -1);
+        w = clamp_int8((int32_t)wheel_buffer[AXIS_Y]);
         
         // Horizontal scroll (pan) - X axis
-        wheel_buffer[AXIS_X] += move_delta[AXIS_X];
-        const int div_h = (scroll_horizontal_denominator > 0) ? scroll_horizontal_denominator : 1;
-        const int32_t steps_h = wheel_buffer[AXIS_X] / div_h;
-        hw = clamp_int8(steps_h);
-        wheel_buffer[AXIS_X] -= (int16_t)hw * div_h;
-        if (hw != 0) {
-            hw = apply_acceleration(
-                hw,
-                rate[AXIS_X],
-                scroll_horizontal_exponent,
-                scroll_horizontal_divisor);
-        }
-        #if HORIZONTAL_SCROLL_INVERTED
-        hw = -hw;
-        #endif
+        wheel_buffer[AXIS_X] += apply_acceleration(
+            move_delta[AXIS_X],
+            rate[AXIS_X],
+            scroll_horizontal_exponent,
+            scroll_horizontal_divisor)
+            * (HORIZONTAL_SCROLL_INVERTED ? -1 : 1);
+        hw = clamp_int8((int32_t)wheel_buffer[AXIS_X]);
     } else {
         // Pointer movement - X
         pointer_buffer[AXIS_X] += apply_acceleration(
@@ -169,6 +154,7 @@ void trackball_task(void)
             rate[AXIS_X],
             acceleration_exponent,
             acceleration_divisor);
+        x = clamp_int8((int32_t)pointer_buffer[AXIS_X]);
 
         // Pointer movement - Y
         pointer_buffer[AXIS_Y] += apply_acceleration(
@@ -176,16 +162,16 @@ void trackball_task(void)
             rate[AXIS_Y],
             acceleration_exponent,
             acceleration_divisor);
-
-        x = (int8_t)clamp_int8((int32_t)pointer_buffer[AXIS_X]);
-        y = (int8_t)clamp_int8((int32_t)pointer_buffer[AXIS_Y]);
-        
-        pointer_buffer[AXIS_X] -= (float)x;
-        pointer_buffer[AXIS_Y] -= (float)y;
+        y = clamp_int8((int32_t)pointer_buffer[AXIS_Y]);
     }
 
     if (x != 0 || y != 0 || w != 0 || hw != 0) {
-        hid_mouse_move(x, y, w, hw);
+        if (hid_mouse_move(x, y, w, hw) == USBD_OK) {
+            pointer_buffer[AXIS_X] -= x;
+            pointer_buffer[AXIS_Y] -= y;
+            wheel_buffer[AXIS_X] -= hw;
+            wheel_buffer[AXIS_Y] -= w;
+        }
         #if KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL
         keyboard_state.last_activity_time = HAL_GetTick();
         #endif
@@ -255,7 +241,7 @@ void trackball_init(void)
     wheel_buffer[AXIS_X] = 0;
     wheel_buffer[AXIS_Y] = 0;
     as_wheel = false;
-    lastWheelMode = false;
+    last_wheel_node = false;
 
     trackball_load_layer_config();
 }

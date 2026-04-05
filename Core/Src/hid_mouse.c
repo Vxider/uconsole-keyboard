@@ -11,7 +11,7 @@ int8_t hid_mouse_move(int8_t x, int8_t y, int8_t wheel, int8_t pan)
     // Report ID (1 byte) + buttons (1 byte) + X (1 byte) + Y (1 byte) + wheel (1 byte) + pan (1 byte) = 6 bytes
     uint8_t mouse_report[6] = {0x02, mouse_buttons, (uint8_t)x, (uint8_t)y, (uint8_t)wheel, (uint8_t)pan};
     uint8_t result = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, mouse_report, 6);
-    hid_wait_for_usb_idle();
+    // hid_wait_for_usb_idle();
     return result;
 }
 
@@ -34,7 +34,6 @@ static int8_t hid_mouse_release(uint8_t button)
     hid_wait_for_usb_idle();
     return result;
 }
-
 
 int8_t hid_mouse_button(uint16_t button, uint8_t mode)
 {
