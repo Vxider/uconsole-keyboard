@@ -142,6 +142,9 @@ void trackball_task(void)
                 scroll_vertical_exponent,
                 scroll_vertical_divisor);
         }
+        #if !VERTICAL_SCROLL_INVERTED
+        w = -w;
+        #endif
         
         // Horizontal scroll (pan) - X axis
         wheel_buffer[AXIS_X] += move_delta[AXIS_X];
@@ -156,6 +159,9 @@ void trackball_task(void)
                 scroll_horizontal_exponent,
                 scroll_horizontal_divisor);
         }
+        #if HORIZONTAL_SCROLL_INVERTED
+        hw = -hw;
+        #endif
     } else {
         // Pointer movement - X
         pointer_buffer[AXIS_X] += apply_acceleration(
@@ -179,7 +185,7 @@ void trackball_task(void)
     }
 
     if (x != 0 || y != 0 || w != 0 || hw != 0) {
-        hid_mouse_move(x, y, -w, hw);
+        hid_mouse_move(x, y, w, hw);
         #if KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL
         keyboard_state.last_activity_time = HAL_GetTick();
         #endif

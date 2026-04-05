@@ -29,6 +29,14 @@ static const uint16_t backlight_vals[3] = {0, 500, 2000};
 // 0 = off, 1 = on
 #define REPLACE_DOUBLE_SEMICOLON_WITH_APOSTROPHE 1
 
+// If defined, the vertical scroll will be inverted
+// 0 = traditional scrolling, 1 = natural scrolling
+#define VERTICAL_SCROLL_INVERTED 0
+
+// If defined, the horizontal scroll will be inverted
+// 0 = traditional scrolling, 1 = natural scrolling
+#define HORIZONTAL_SCROLL_INVERTED 0
+
 // If the key is pressed and released within this time, the double press feature will be triggered
 #define DOUBLE_PRESS_TIME_MS 300
 
