@@ -5,9 +5,6 @@
 #include <math.h>
 #include <limits.h>
 
-uint32_t getDelta(uint32_t prev, uint32_t now);
-uint32_t getDeltaMax(uint32_t prev, uint32_t now, uint32_t max);
-
 static inline int8_t sign(int32_t value) {
     if (value > 0) return 1;
     if (value < 0) return -1;
@@ -32,5 +29,10 @@ static inline float hypot_f(float x, float y) {
     return sqrtf(x * x + y * y);
 }
 
-#endif
+#define ATOM_MOVE(A, B) \
+    __disable_irq(); \
+    A = B; \
+    B = 0; \
+    __enable_irq();
 
+#endif

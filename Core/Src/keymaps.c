@@ -4,7 +4,7 @@
 #include "hid_mouse.h"
 #include "hid_consumer.h"
 #include "hid_gamepad.h"
-#include "hid_raw.h"
+#include "hid_vendor.h"
 #include "trackball.h"
 #include "main.h"
 #include "stm32f1xx_hal.h"
@@ -44,7 +44,7 @@ static void do_the_key(uint16_t k, uint8_t mode)
         case SK_KEYBOARD_LOCK:
             if (mode == KEY_PRESSED) {
                 fn_lock_set(!keyboard_state.fn_lock);
-                rawhid_send();
+                hid_vendor_send();
             }
             break;
 
@@ -179,25 +179,25 @@ void matrix_action(uint8_t row, uint8_t col, uint8_t mode)
         switch (addr)
         {
             case BUTTON_1:
-                layer_set(0); rawhid_send(); return;
+                layer_set(0); hid_vendor_send(); return;
             case BUTTON_2:
-                layer_set(1); rawhid_send(); return;
+                layer_set(1); hid_vendor_send(); return;
             case BUTTON_3:
-                layer_set(2); rawhid_send(); return;
+                layer_set(2); hid_vendor_send(); return;
             case BUTTON_4:
-                layer_set(3); rawhid_send(); return;
+                layer_set(3); hid_vendor_send(); return;
             case BUTTON_5:
-                layer_set(4); rawhid_send(); return;
+                layer_set(4); hid_vendor_send(); return;
             case BUTTON_6:
-                layer_set(5); rawhid_send(); return;
+                layer_set(5); hid_vendor_send(); return;
             case BUTTON_7:
-                layer_set(6); rawhid_send(); return;
+                layer_set(6); hid_vendor_send(); return;
             case BUTTON_8:
-                layer_set(7); rawhid_send(); return;
+                layer_set(7); hid_vendor_send(); return;
             case BUTTON_9:
-                layer_set(8); rawhid_send(); return;
+                layer_set(8); hid_vendor_send(); return;
             case BUTTON_0:
-                layer_set(9); rawhid_send(); return;
+                layer_set(9); hid_vendor_send(); return;
             default:
                 break;
         }

@@ -20,9 +20,9 @@ TARGET = uconsole_keyboard
 # building variables
 ######################################
 # debug build?
-DEBUG = 1
-# optimization
-OPT = -Og
+DEBUG = 0
+# optimization (-O3: max speed; avoid -Ofast unless float semantics can change)
+OPT = -O3
 
 
 #######################################
@@ -47,11 +47,10 @@ Core/Src/hid_keyboard.c \
 Core/Src/hid_mouse.c \
 Core/Src/hid_gamepad.c \
 Core/Src/hid_consumer.c \
-Core/Src/hid_raw.c \
+Core/Src/hid_vendor.c \
 Core/Src/ratemeter.c \
-Core/Src/glider.c \
-Core/Src/math_utils.c \
 Core/Src/leds.c \
+Core/Src/prec_time.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c \
@@ -78,7 +77,8 @@ Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c \
-Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c
+Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c \
+Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_iwdg.c
 
 # ASM sources
 ASM_SOURCES =  \

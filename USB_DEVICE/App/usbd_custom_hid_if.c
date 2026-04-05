@@ -23,7 +23,7 @@
 
 /* USER CODE BEGIN INCLUDE */
 #include "leds.h"
-#include "hid_raw.h"
+#include "hid_vendor.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -214,7 +214,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
   0x95, 0x08,        //   Report Count (8)
   0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
 
-  // Vendor: single byte 0-255 for hidraw read/write (Report ID 5)
+  // Vendor: 3 bytes for read/write (Report ID 5)
   0x05, 0xFF,        // Usage Page (Vendor Defined)
   0x09, 0x01,        // Usage (Vendor 1)
   0xA1, 0x01,        // Collection (Application)
@@ -314,7 +314,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state)
   /* USER CODE BEGIN 6 */
   if (event_idx == 5U)
   {
-    rawhid_on_recv(state);
+    hid_vendor_on_recv(state);
   }
   else if (event_idx == 1U)
   {
@@ -325,24 +325,19 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t* state)
 }
 
 /* USER CODE BEGIN 7 */
-/**
-  * @brief  Send Report ID 5 (vendor value 0-255) to the host for hidraw read().
-  * @param  value: Byte to send (0-255)
-  * @retval USBD_OK if sent else USBD_FAIL
-  */
-int8_t Custom_HID_SendVendorValue(uint8_t* data)
-{
-  uint8_t report[4] = { 0x05U, data[0], data[1], data[2] };
-  return (int8_t)USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report, 4U);
-}
-
 void hid_wait_for_usb_idle(void)
 {
-    // Wait until USB HID device is idle (report buffer is free)
-    USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
-    while (hhid != NULL && hhid->state != CUSTOM_HID_IDLE)
-    {
-        // Wait for state to become IDLE
+    /* Wait until IN transfer completes (DataIn sets state to IDLE).
+     * Volatile read: ISR updates state; without it, -O3 can cache and spin forever. */
+    USBD_CUSTOM_HID_HandleTypeDef *hhid =
+        (USBD_CUSTOM_HID_HandleTypeDef *)hUsbDeviceFS.pClassData;
+    if (hhid == NULL) {
+        return;
+    }
+    volatile CUSTOM_HID_StateTypeDef *st =
+        (volatile CUSTOM_HID_StateTypeDef *)&hhid->state;
+    while (*st != CUSTOM_HID_IDLE) {
+      /* wait for IDLE */
     }
 }
 /* USER CODE END 7 */

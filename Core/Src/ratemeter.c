@@ -1,5 +1,6 @@
 #include "ratemeter.h"
 #include "stm32f1xx_hal.h"
+#include "prec_time.h"
 
 void ratemeter_init(RateMeter* rm)
 {
@@ -10,18 +11,21 @@ void ratemeter_init(RateMeter* rm)
 
 void ratemeter_onInterrupt(RateMeter* rm)
 {
-    const uint32_t now = HAL_GetTick();
+    const uint64_t now = prec_time_get_us();
     if (rm->timeout == 0) {
-        rm->averageDelta = CUTOFF_MS;
+        rm->averageDelta = CUTOFF_US;
     } else {
-        const uint32_t delta = getDeltaMax(rm->lastTime, now, CUTOFF_MS);
+        uint64_t delta = prec_time_delta_us(&rm->lastTime);
+        if (delta > CUTOFF_US) {
+            delta = CUTOFF_US;
+        }
         rm->averageDelta = (rm->averageDelta + delta) / 2;
     }
     rm->lastTime = now;
-    rm->timeout = CUTOFF_MS;
+    rm->timeout = CUTOFF_US;
 }
 
-void ratemeter_tick(RateMeter* rm, uint8_t delta)
+void ratemeter_tick(RateMeter* rm, uint32_t delta)
 {
     if (rm->timeout > delta) {
         rm->timeout -= delta;
@@ -48,9 +52,9 @@ float ratemeter_rate(const RateMeter* rm)
     if (rm->timeout == 0) {
         return 0.0f;
     } else if (rm->averageDelta == 0) {
-        return 1000.0f;
+        return CUTOFF_US;
     } else {
-        return 1000.0f / (float)rm->averageDelta;
+        return CUTOFF_US * 1.0f / (float)rm->averageDelta;
     }
 }
 

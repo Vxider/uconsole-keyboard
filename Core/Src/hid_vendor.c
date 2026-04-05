@@ -1,9 +1,11 @@
 #include <stdint.h>
-#include "hid_raw.h"
+#include "hid_vendor.h"
 #include "keymaps.h"
 #include "usbd_custom_hid_if.h"
 
-void rawhid_on_recv(uint8_t* data) {
+extern USBD_HandleTypeDef hUsbDeviceFS;
+
+void hid_vendor_on_recv(uint8_t* data) {
     if (data[0] == 0xFE && data[1] == 0x55 && data[2] == 0xAA) {
         // Bootloader magic
         jump_to_bootloader();
@@ -27,14 +29,17 @@ void rawhid_on_recv(uint8_t* data) {
         }
     }
 
-    rawhid_send();
+    hid_vendor_send();
 }
 
-void rawhid_send() {
-    uint8_t data[3] = {
+uint8_t hid_vendor_send(void) {
+    uint8_t data[4] = {
+        0x05,
         layer_get(),
         keyboard_state.fn_lock ? (1 << KEYBOARD_OPTION_FN_LOCK) : 0,
         keyboard_state.double_p_to_brace_left ? (1 << KEYBOARD_OPTION_DOUBLE_P_TO_BRACE_LEFT) : 0
     };
-    Custom_HID_SendVendorValue(data);
+    uint8_t result = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, data, sizeof(data));
+    hid_wait_for_usb_idle();
+    return result;
 }

@@ -3,7 +3,6 @@
 
 #include "main.h"
 #include <stdint.h>
-#include "usbd_custom_hid_if.h"
 
 /* HID Gamepad button codes */
 #define GAMEPAD_BUTTON_1   (GAMEPAD_BUTTON_FLAG | 1)

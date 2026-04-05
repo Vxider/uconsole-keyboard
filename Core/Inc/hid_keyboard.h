@@ -3,7 +3,6 @@
 
 #include "main.h"
 #include <stdint.h>
-#include "usbd_custom_hid_if.h"
 
 /* HID Keyboard key codes */
 

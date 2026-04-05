@@ -1,5 +1,5 @@
 #include "hid_keyboard.h"
-#include "usbd_customhid.h"
+#include "usbd_custom_hid_if.h"
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 

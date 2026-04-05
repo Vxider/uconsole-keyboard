@@ -1,6 +1,6 @@
 #include "hid_consumer.h"
 #include "hid_keyboard.h"  // For hid_wait_for_usb_idle()
-#include "usbd_customhid.h"
+#include "usbd_custom_hid_if.h"
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
