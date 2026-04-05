@@ -309,8 +309,7 @@ int main(void)
     non_matrix_task();
     trackball_task();
     
-    HAL_Delay(1);
-    //prec_time_wait_us(500);
+    prec_time_wait_us(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
