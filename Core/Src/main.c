@@ -158,11 +158,13 @@ void leds_blink(uint8_t count, uint16_t interval)
 */
 void jump_to_bootloader(void)
 {
-    IWDG->KR = 0x5555;
-    IWDG->PR = 0;
-    IWDG->RLR = 1;
-    IWDG->KR = 0xCCCC;
-    while (1);  
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg.Init.Reload = 1;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  while (1);
 }
 
 void load_config(void)

@@ -112,7 +112,7 @@ void trackball_task(void)
     ATOM_MOVE(move_delta[AXIS_X], distances[AXIS_X]);
     ATOM_MOVE(move_delta[AXIS_Y], distances[AXIS_Y]);
 
-    // Reset wheel buffers only when switching modes
+    // Reset when switching modes
     if (as_wheel != lastWheelMode) {
         ratemeter_init(&ratemeter[AXIS_X]);
         ratemeter_init(&ratemeter[AXIS_Y]);
