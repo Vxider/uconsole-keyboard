@@ -1,8 +1,9 @@
 #ifndef HID_GAMEPAD_H
 #define HID_GAMEPAD_H
 
-#include "main.h"
 #include <stdint.h>
+#include "main.h"
+#include "usbd_custom_hid_if.h"
 
 /* HID Gamepad button codes */
 #define GAMEPAD_BUTTON_1   (GAMEPAD_BUTTON_FLAG | 1)
@@ -25,11 +26,12 @@
 #define GAMEPAD_AXIS_MAX   127
 #define GAMEPAD_AXIS_CENTER 0
 
-int8_t hid_gamepad_set_axes(int8_t x, int8_t y);
-int8_t hid_gamepad_set_x(int8_t x);
-int8_t hid_gamepad_set_y(int8_t y);
-int8_t hid_gamepad_button(uint16_t button, uint8_t mode);
-int8_t hid_gamepad_release_all(void);
+USBD_StatusTypeDef hid_gamepad_task(void);
+void hid_gamepad_set_axes(int8_t x, int8_t y);
+void hid_gamepad_set_x(int8_t x);
+void hid_gamepad_set_y(int8_t y);
+void hid_gamepad_button(uint16_t button, uint8_t mode);
+void hid_gamepad_release_all(void);
 
 #endif
 

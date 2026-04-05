@@ -32,14 +32,14 @@ void hid_vendor_on_recv(uint8_t* data) {
     hid_vendor_send();
 }
 
-uint8_t hid_vendor_send(void) {
+USBD_StatusTypeDef hid_vendor_send(void) {
     uint8_t data[4] = {
         0x05,
         layer_get(),
         keyboard_state.fn_lock ? (1 << KEYBOARD_OPTION_FN_LOCK) : 0,
         keyboard_state.double_p_to_brace_left ? (1 << KEYBOARD_OPTION_DOUBLE_P_TO_BRACE_LEFT) : 0
     };
-    uint8_t result = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, data, sizeof(data));
+
     hid_wait_for_usb_idle();
-    return result;
+    return USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, data, sizeof(data));
 }

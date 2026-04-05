@@ -268,9 +268,8 @@ int main(void)
     }
   }
   
-  // Wait for USB connection
-  HAL_Delay(1000);
-  
+  hid_wait_for_usb_idle();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -279,24 +278,26 @@ int main(void)
   {
     HAL_IWDG_Refresh(&hiwdg);
 
-    uint32_t time = HAL_GetTick();
+    // Get the current time
+    uint64_t time_us = prec_time_get_us();
+    uint64_t time_ms = HAL_GetTick();
 
     // Update backlight PWM
-    if (keyboard_state.leds_timer > time && keyboard_state.leds_interfal > 0) {
+    if (keyboard_state.leds_timer > time_ms && keyboard_state.leds_interfal > 0) {
       // Blink the LEDs (keyboard backlight)
-      uint8_t v = ((keyboard_state.leds_timer - time) / (keyboard_state.leds_interfal / 2)) & 1;
+      uint8_t v = ((keyboard_state.leds_timer - time_ms) / (keyboard_state.leds_interfal / 2)) & 1;
       __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, !v * 0xFFFF);
       HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, v ? GPIO_PIN_SET : GPIO_PIN_RESET);
     }
-    else if (time - keyboard_state.last_activity_time < KEYBOARD_BACKLIGHT_OFF_TIME * 1000) {
+    else if (time_ms - keyboard_state.last_activity_time < KEYBOARD_BACKLIGHT_OFF_TIME * 1000) {
       // Normal backlight
       __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, backlight_vals[keyboard_state.backlight]);
-    } else if (time - keyboard_state.last_activity_time >= KEYBOARD_BACKLIGHT_OFF_TIME * 1000 + KEYBOARD_BACKLIGHT_DIM_OUT_DURATION) {
+    } else if (time_ms - keyboard_state.last_activity_time >= KEYBOARD_BACKLIGHT_OFF_TIME * 1000 + KEYBOARD_BACKLIGHT_DIM_OUT_DURATION) {
       // Turn off the backlight
       __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, KEYBOARD_BACKLIGHT_DIMMED_OUT_VALUE);
     } else {
       // Dim out the backlight
-      uint32_t full_off_remaining_time = keyboard_state.last_activity_time + KEYBOARD_BACKLIGHT_OFF_TIME * 1000 + KEYBOARD_BACKLIGHT_DIM_OUT_DURATION - time;
+      uint32_t full_off_remaining_time = keyboard_state.last_activity_time + KEYBOARD_BACKLIGHT_OFF_TIME * 1000 + KEYBOARD_BACKLIGHT_DIM_OUT_DURATION - time_ms;
       uint32_t dim_out_value = ((uint32_t)backlight_vals[keyboard_state.backlight] - KEYBOARD_BACKLIGHT_DIMMED_OUT_VALUE) 
         * full_off_remaining_time 
         / KEYBOARD_BACKLIGHT_DIM_OUT_DURATION
@@ -308,8 +309,13 @@ int main(void)
     matrix_task();
     non_matrix_task();
     trackball_task();
-    
-    prec_time_wait_us(500);
+    hid_gamepad_task();
+
+    // Repeat the loop every 500 microseconds
+    while (prec_time_get_us() - time_us < 500) {
+      // Wait
+    }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -25,7 +25,7 @@ static uint8_t usage_to_bit(uint16_t code)
     }
 }
 
-static int8_t hid_consumer_press(uint16_t code)
+static USBD_StatusTypeDef hid_consumer_press(uint16_t code)
 {
     uint8_t bit = usage_to_bit(code);
     if (bit == 255) return USBD_FAIL; // Invalid code
@@ -47,10 +47,8 @@ static int8_t hid_consumer_press(uint16_t code)
     consumer_report[2] = (uint8_t)((consumer_state >> 8) & 0xFF);
     
     // Send press report
-    int8_t result = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, consumer_report, 3);
     hid_wait_for_usb_idle();
-    
-    return result;
+    return USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, consumer_report, 3);
 }
 
 static int8_t hid_consumer_release(uint16_t code)

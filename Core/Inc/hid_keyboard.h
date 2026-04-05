@@ -1,8 +1,9 @@
 #ifndef HID_KEYBOARD_H
 #define HID_KEYBOARD_H
 
-#include "main.h"
 #include <stdint.h>
+#include "main.h"
+#include "usbd_custom_hid_if.h"
 
 /* HID Keyboard key codes */
 
@@ -116,10 +117,9 @@
 #define KEY_NON_US_2            0x64
 #define KEY_APPLICATION         0x65
 
-
-int8_t hid_keyboard_button(uint16_t key, uint8_t mode);
-int8_t hid_keyboard_release_all(void);
-int8_t hid_keyboard_modifier(uint16_t modifier_bit, uint8_t mode);
+USBD_StatusTypeDef hid_keyboard_button(uint16_t key, uint8_t mode);
+USBD_StatusTypeDef hid_keyboard_release_all(void);
+USBD_StatusTypeDef hid_keyboard_modifier(uint16_t modifier_bit, uint8_t mode);
 
 #endif
 

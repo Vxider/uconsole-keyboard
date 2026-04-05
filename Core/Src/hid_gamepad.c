@@ -6,8 +6,11 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 // Static variable to maintain gamepad state
 static uint8_t gamepad_buttons = 0;
+static uint8_t gamepad_buttons_last = 0;
 static int8_t gamepad_x = 0;
 static int8_t gamepad_y = 0;
+static int8_t gamepad_x_last = 0;
+static int8_t gamepad_y_last = 0;
 
 // Directional buttons state
 static uint8_t dir_up = 0;
@@ -15,7 +18,23 @@ static uint8_t dir_down = 0;
 static uint8_t dir_left = 0;
 static uint8_t dir_right = 0;
 
-int8_t hid_gamepad_set_axes(int8_t x, int8_t y)
+USBD_StatusTypeDef hid_gamepad_task(void)
+{
+    if (gamepad_buttons == gamepad_buttons_last
+        && gamepad_x == gamepad_x_last 
+        && gamepad_y == gamepad_y_last) {
+        return USBD_OK;
+    }
+
+    uint8_t gamepad_report[4] = {0x04, (uint8_t)gamepad_x, (uint8_t)gamepad_y, gamepad_buttons};
+    if (USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, gamepad_report, 4) == USBD_OK) {
+        gamepad_buttons_last = gamepad_buttons;
+        gamepad_x_last = gamepad_x;
+        gamepad_y_last = gamepad_y;
+    }
+}
+
+void hid_gamepad_set_axes(int8_t x, int8_t y)
 {
     // Clamp values to valid range
     if (x < GAMEPAD_AXIS_MIN) x = GAMEPAD_AXIS_MIN;
@@ -25,22 +44,16 @@ int8_t hid_gamepad_set_axes(int8_t x, int8_t y)
     
     gamepad_x = x;
     gamepad_y = y;
-    
-    // Report ID (1 byte) + X (1 byte) + Y (1 byte) + Buttons (1 byte) = 4 bytes
-    uint8_t gamepad_report[4] = {0x04, (uint8_t)gamepad_x, (uint8_t)gamepad_y, gamepad_buttons};
-    int8_t result = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, gamepad_report, 4);
-    hid_wait_for_usb_idle();
-    return result;
 }
 
-int8_t hid_gamepad_set_x(int8_t x)
+void hid_gamepad_set_x(int8_t x)
 {
-    return hid_gamepad_set_axes(x, gamepad_y);
+    hid_gamepad_set_axes(x, gamepad_y);
 }
 
-int8_t hid_gamepad_set_y(int8_t y)
+void hid_gamepad_set_y(int8_t y)
 {
-    return hid_gamepad_set_axes(gamepad_x, y);
+    hid_gamepad_set_axes(gamepad_x, y);
 }
 
 static void hid_gamepad_update_axes_from_directions(void)
@@ -68,16 +81,7 @@ static void hid_gamepad_update_axes_from_directions(void)
     }
 }
 
-static int8_t hid_gamepad_send_report(void)
-{
-    // Report ID (1 byte) + X (1 byte) + Y (1 byte) + Buttons (1 byte) = 4 bytes
-    uint8_t gamepad_report[4] = {0x04, (uint8_t)gamepad_x, (uint8_t)gamepad_y, gamepad_buttons};
-    int8_t result = USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, gamepad_report, 4);
-    hid_wait_for_usb_idle();
-    return result;
-}
-
-int8_t hid_gamepad_button(uint16_t button, uint8_t mode)
+void hid_gamepad_button(uint16_t button, uint8_t mode)
 {
     uint8_t is_pressed = (mode == KEY_PRESSED) ? 1 : 0;    
     int button_bit = -1;
@@ -118,18 +122,10 @@ int8_t hid_gamepad_button(uint16_t button, uint8_t mode)
             button_bit = 7; break;
     }
 
-    if (button_bit != -1) {
-        if (is_pressed) {
-                gamepad_buttons |= (1 << button_bit);
-        } else {
-            gamepad_buttons &= ~(1 << button_bit);
-        }
-    }
-
-    return hid_gamepad_send_report();
+    hid_gamepad_task();
 }
-
-int8_t hid_gamepad_release_all(void)
+    
+void hid_gamepad_release_all(void)
 {
     gamepad_buttons = 0;
     gamepad_x = GAMEPAD_AXIS_CENTER;
@@ -138,6 +134,7 @@ int8_t hid_gamepad_release_all(void)
     dir_down = 0;
     dir_left = 0;
     dir_right = 0;
-    return hid_gamepad_send_report();
+    
+    hid_gamepad_task();
 }
 
