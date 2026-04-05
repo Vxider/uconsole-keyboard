@@ -46,7 +46,7 @@ static int scroll_horizontal_denominator;
 static float scroll_horizontal_exponent;
 static float scroll_horizontal_divisor;
 
-static int8_t applyScrollAcceleration(int8_t steps, float rate, float exponent, float divisor)
+static int8_t apply_acceleration(int8_t steps, float rate, float exponent, float divisor)
 {
     if (steps == 0) {
         return 0;
@@ -136,7 +136,7 @@ void trackball_task(void)
         w = clamp_int8(steps_v);
         wheel_buffer[AXIS_Y] -= (int16_t)w * div_v;
         if (w != 0) {
-            w = applyScrollAcceleration(
+            w = apply_acceleration(
                 w,
                 rate[AXIS_Y],
                 scroll_vertical_exponent,
@@ -150,7 +150,7 @@ void trackball_task(void)
         hw = clamp_int8(steps_h);
         wheel_buffer[AXIS_X] -= (int16_t)hw * div_h;
         if (hw != 0) {
-            hw = applyScrollAcceleration(
+            hw = apply_acceleration(
                 hw,
                 rate[AXIS_X],
                 scroll_horizontal_exponent,
@@ -158,14 +158,14 @@ void trackball_task(void)
         }
     } else {
         // Pointer movement - X
-        pointer_buffer[AXIS_X] += applyScrollAcceleration(
+        pointer_buffer[AXIS_X] += apply_acceleration(
             (int32_t)move_delta[AXIS_X],
             rate[AXIS_X],
             acceleration_exponent,
             acceleration_divisor);
 
         // Pointer movement - Y
-        pointer_buffer[AXIS_Y] += applyScrollAcceleration(
+        pointer_buffer[AXIS_Y] += apply_acceleration(
             (int32_t)move_delta[AXIS_Y],
             rate[AXIS_Y],
             acceleration_exponent,
