@@ -15,6 +15,7 @@
 #define CONSUMER_SCAN_PREV_TRACK    (CONSUMER_KEY_FLAG | 0xB6)
 #define CONSUMER_STOP               (CONSUMER_KEY_FLAG | 0xB7)
 #define CONSUMER_PLAY_PAUSE         (CONSUMER_KEY_FLAG | 0xCD)
+#define CONSUMER_SCREEN_LOCK        (CONSUMER_KEY_FLAG | 0x19E)
 
 int8_t hid_consumer_button(uint16_t code, uint8_t mode);
 

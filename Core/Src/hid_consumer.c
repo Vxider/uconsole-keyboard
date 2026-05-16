@@ -21,6 +21,7 @@ static uint8_t usage_to_bit(uint16_t code)
         case CONSUMER_SCAN_PREV_TRACK: return 6;  // Bit 6
         case CONSUMER_STOP:           return 7;   // Bit 7
         case CONSUMER_PLAY_PAUSE:     return 8;   // Bit 8
+        case CONSUMER_SCREEN_LOCK:    return 9;   // Bit 9
         default:                      return 255; // Invalid
     }
 }
