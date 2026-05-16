@@ -21,7 +21,7 @@ static const uint16_t backlight_vals[3] = {0, 500, 2000};
 
 // If defined, the keyboard backlight will resume when the trackball is moved
 // 0 = resume only on keypress, 1 = resume on keypress and trackball movement
-#define KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL 0
+#define KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL 1
 
 // If defined, the double semicolon will be replaced with an apostrophe
 // This is useful for typing Russian text with the keyboard (жж -> э)
