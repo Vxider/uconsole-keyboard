@@ -54,6 +54,7 @@ static void do_the_key(uint16_t k, uint8_t mode)
                 if (keyboard_state.backlight >= (sizeof(backlight_vals) / sizeof(backlight_vals[0]))) {
                     keyboard_state.backlight = 0;
                 }
+                hid_vendor_schedule_send();
                 // PWM will be set in main loop
             }
             break;

@@ -1,15 +1,17 @@
 #!/bin/bash
 #
-# Read or write keyboard layer and FN lock via hidraw (Report ID 5, 3 data bytes).
+# Read or write keyboard layer, backlight, and FN lock via hidraw (Report ID 5, 3 data bytes).
 # Byte0: low nibble = layer (0-9 internally, displayed as 1-10), 0x0F = don't change.
+#        high nibble = backlight level when byte2 bit 6 is set.
 # Byte1: bit flags (bit 0 = FN lock).
-# Byte2: bit mask for flags to set (bit 0 = set FN lock).
+# Byte2: bit mask for flags to set (bit 0 = set FN lock, bit 6 = set backlight).
 #
 # Usage:
-#   keyboard_state.sh get              - print current layer (1-10) and fn_lock
+#   keyboard_state.sh get              - print current layer (1-10), backlight (0-2), and fn_lock
 #   keyboard_state.sh set --layer N    - set layer 1-10 (keeps FN lock state)
+#   keyboard_state.sh set --backlight N - set backlight 0-2
 #   keyboard_state.sh set --fn-lock on|off
-#   keyboard_state.sh set --layer N --fn-lock on|off
+#   keyboard_state.sh set --layer N --backlight N --fn-lock on|off
 #
 
 set -e
@@ -17,6 +19,9 @@ set -e
 DEVICE_VID="1eaf"
 DEVICE_PID="0024"
 REPORT_ID='\x05'
+BACKLIGHT_MAX_LEVEL=2
+MASK_FN_LOCK=0x01
+MASK_BACKLIGHT=0x40
 
 find_hidraw() {
     for d in /sys/class/hidraw/hidraw*; do
@@ -79,14 +84,16 @@ cmd() {
         echo "Unexpected report ID 0x${report_id} (expected 0x05). Another report type was received." >&2
         return 1
     fi
-    # Byte1 = layer (0-9), byte2 = flags (bit 0 = fn_lock), byte3 reserved
+    # Byte1 = backlight in high nibble, layer in low nibble.
+    # Byte2 = flags (bit 0 = fn_lock), byte3 = option flags not parsed here.
     local b1=$((16#${hex:2:2}))
     local b2=$((16#${hex:4:2}))
     local layer_internal=$((b1 & 0x0F))
+    local backlight=$(((b1 >> 4) & 0x0F))
     local fn_lock=$(( (b2 & 0x01) != 0 ))
     # Convert to 1-based for user (0-9 -> 1-10)
     local layer_user=$((layer_internal + 1))
-    echo "layer=$layer_user fn_lock=$([ "$fn_lock" -eq 1 ] && echo on || echo off)"
+    echo "layer=$layer_user backlight=$backlight fn_lock=$([ "$fn_lock" -eq 1 ] && echo on || echo off)"
 }
 
 cmd_get() {
@@ -95,10 +102,11 @@ cmd_get() {
 }
 
 cmd_set() {
-    local layer="" fn_lock=""
+    local layer="" backlight="" fn_lock=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --layer)   layer="$2"; shift 2 ;;
+            --backlight) backlight="$2"; shift 2 ;;
             --fn-lock) fn_lock="$2"; shift 2 ;;
             *) echo "Unknown option: $1" >&2; exit 1 ;;
         esac
@@ -117,13 +125,22 @@ cmd_set() {
         fi
         b0=$(((layer - 1) & 0x0F))
     fi
+
+    if [[ -n "$backlight" ]]; then
+        if [[ "$backlight" -lt 0 || "$backlight" -gt "$BACKLIGHT_MAX_LEVEL" ]]; then
+            echo "Backlight must be 0-$BACKLIGHT_MAX_LEVEL" >&2
+            exit 1
+        fi
+        b0=$((b0 | ((backlight & 0x0F) << 4)))
+        b2=$((b2 | MASK_BACKLIGHT))
+    fi
     
     if [[ -n "$fn_lock" ]]; then
-        b2=$((b2 | 0x01))  # set bit 0 in mask
+        b2=$((b2 | MASK_FN_LOCK))  # set bit 0 in mask
         if [[ "$fn_lock" == "on" ]]; then
-            b1=$((b1 | 0x01))  # set bit 0 in flags
+            b1=$((b1 | MASK_FN_LOCK))  # set bit 0 in flags
         elif [[ "$fn_lock" == "off" ]]; then
-            b1=$((b1 & 0xFE))  # clear bit 0 in flags
+            b1=$((b1 & ~MASK_FN_LOCK))  # clear bit 0 in flags
         else
             echo "fn-lock must be 'on' or 'off'" >&2
             exit 1
@@ -150,8 +167,9 @@ case "${1:-}" in
     get)  cmd_get ;;
     set)  shift; cmd_set "$@" ; ;;
     *)
-        echo "Usage: $0 get | set [--layer N] [--fn-lock on|off]" >&2
+        echo "Usage: $0 get | set [--layer N] [--backlight N] [--fn-lock on|off]" >&2
         echo "  Layer N: 1-10 (1-based)" >&2
+        echo "  Backlight N: 0-$BACKLIGHT_MAX_LEVEL" >&2
         exit 1
         ;;
 esac

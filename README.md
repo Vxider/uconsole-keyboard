@@ -27,6 +27,7 @@ This port completely eliminates all that Arduino nonsense and uses clean STM32 H
 - **Layer system** - up to 10 configurable keyboard layouts, switchable via `LeftCtrl`+`RightCtrl`+`Number`
 - **Horizontal scrolling** - Fn + Trackball scrolls horizontally as well as vertically
 - **Keyboard backlight dimming after inactivity** - configurable in `config.h`
+- **Runtime backlight control** - read and set keyboard backlight level from Linux via hidraw
 - **Trackball acceleration curve** - improved mouse control
 - **Screen Lock key** - press `Fn`+`Esc` to lock the screen
 - **Fn Lock** - available as `SK_KEYBOARD_LOCK` for custom layer mappings; toggles F1–F12 without holding Fn
@@ -189,6 +190,8 @@ This hardware design ensures that modifier keys (Shift, Ctrl, Alt) and gaming co
 
 | Setting | Description |
 |---------|-------------|
+| `backlight_vals` | Keyboard backlight PWM levels. The default has three levels: 0, 500, 2000 |
+| `KEYBOARD_INITIAL_BACKLIGHT_VALUE_ID` | Initial backlight level index |
 | `KEYBOARD_BACKLIGHT_OFF_TIME` | Seconds of inactivity before backlight dims (0 = never) |
 | `KEYBOARD_BACKLIGHT_DIM_OUT_DURATION` | Dim-out animation duration in ms |
 | `KEYBOARD_BACKLIGHT_RESUME_BY_TRACKBALL` | Resume backlight on trackball movement (0/1) |
@@ -197,6 +200,33 @@ This hardware design ensures that modifier keys (Shift, Ctrl, Alt) and gaming co
 | `GLIDER_SUSTAIN_SPEED_SCALE` | Sustain scales with speed (higher = fast flicks coast longer) |
 | `GLIDER_DECAY_FACTOR_PER_MS` | Braking speed (0.80 = fast stop, 0.95 = long slide) |
 | `GLIDER_SPEED_EPSILON` | Speed threshold to stop completely |
+
+### Runtime state control from Linux
+
+The firmware exposes a small vendor HID report on Report ID 5. On Linux, `tools/keyboard_state.sh` uses hidraw to read and update runtime state without reflashing.
+
+The script requires `xxd` and access to the keyboard hidraw device. Install `xxd` from the package that provides it on your distribution, for example `xxd` or `vim-common`.
+
+```bash
+# Read current state
+bash ./tools/keyboard_state.sh get
+# Example output:
+# layer=1 backlight=2 fn_lock=off
+
+# Set layer, using 1-based layer numbers
+bash ./tools/keyboard_state.sh set --layer 2
+
+# Set keyboard backlight level
+bash ./tools/keyboard_state.sh set --backlight 0
+bash ./tools/keyboard_state.sh set --backlight 1
+bash ./tools/keyboard_state.sh set --backlight 2
+
+# Set Fn Lock
+bash ./tools/keyboard_state.sh set --fn-lock on
+bash ./tools/keyboard_state.sh set --fn-lock off
+```
+
+Backlight levels are zero-based indexes into `backlight_vals` in `config.h`. With the default configuration, `0` is off, `1` is medium, and `2` is full brightness. `Fn + Space` uses the same levels and cycles through them on the keyboard.
 
 
 ## Building
