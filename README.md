@@ -28,7 +28,8 @@ This port completely eliminates all that Arduino nonsense and uses clean STM32 H
 - **Horizontal scrolling** - Fn + Trackball scrolls horizontally as well as vertically
 - **Keyboard backlight dimming after inactivity** - configurable in `config.h`
 - **Trackball acceleration curve** - improved mouse control
-- **Fn Lock** - toggle to permanently invert Fn for F1–F12 keys (press `Fn`+`Esc` to toggle; backlight blinks to confirm)
+- **Screen Lock key** - press `Fn`+`Esc` to lock the screen
+- **Fn Lock** - available as `SK_KEYBOARD_LOCK` for custom layer mappings; toggles F1–F12 without holding Fn
 
 
 ## Configuration
@@ -66,7 +67,7 @@ The firmware ships with three pre-configured layers. Layer 1 is the main layer w
 | Fn + Key | Action | Notes |
 |----------|--------|-------|
 | Fn + Volume | Mute | |
-| Fn + Esc | Fn Lock | Toggle F1–F12 without holding Fn |
+| Fn + Esc | Screen Lock | Locks the current desktop session |
 | Fn + Tab | Caps Lock | |
 | Fn + 1–0 | F1–F10 | |
 | Fn + − | F11 | |
@@ -135,7 +136,7 @@ LAYER(1, "Main");                       // Start defining layer 1
 BIND(BUTTON_Q, KEY_Q);                  // Q key produces 'Q'
 BIND(BUTTON_GAMEPAD_A, MOUSE_LEFT);     // GP A button produces mouse left click
 BIND_FN(BUTTON_1, KEY_F1);              // Fn+1 produces F1
-BIND_FN(BUTTON_ESC, SK_KEYBOARD_LOCK);  // Fn+Esc toggles Fn Lock
+BIND_FN(BUTTON_ESC, CONSUMER_SCREEN_LOCK); // Fn+Esc locks the screen
 ```
 
 **Trackball settings (per layer):**
@@ -158,7 +159,7 @@ BIND(BUTTON_SPACE, KEY_ENTER);          // Space produces Enter
 BIND_FN(BUTTON_SPACE, KEY_NONE);        // Disable Fn+Space on this layer
 ```
 
-**Available key codes:** see `Core/Inc/hid_keyboard.h` for keyboard keys, `Core/Inc/hid_gamepad.h` for gamepad buttons, and `Core/Inc/keymaps.h` for button names. Mouse buttons: `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK`, `MOUSE_FORWARD`. Consumer keys: `CONSUMER_VOLUME_UP`, `CONSUMER_VOLUME_DOWN`, `CONSUMER_MUTE`, `CONSUMER_BRIGHTNESS_UP`, `CONSUMER_BRIGHTNESS_DOWN`. Special keys: `SK_FN_KEY`, `SK_KEYBOARD_LOCK` (Fn Lock), `SK_KEYBOARD_LIGHT` (toggle backlight). Use `KEY_NONE` to explicitly disable a key.
+**Available key codes:** see `Core/Inc/hid_keyboard.h` for keyboard keys, `Core/Inc/hid_gamepad.h` for gamepad buttons, and `Core/Inc/keymaps.h` for button names. Mouse buttons: `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK`, `MOUSE_FORWARD`. Consumer keys: `CONSUMER_VOLUME_UP`, `CONSUMER_VOLUME_DOWN`, `CONSUMER_MUTE`, `CONSUMER_BRIGHTNESS_UP`, `CONSUMER_BRIGHTNESS_DOWN`, `CONSUMER_SCREEN_LOCK`. Special keys: `SK_FN_KEY`, `SK_KEYBOARD_LOCK` (Fn Lock), `SK_KEYBOARD_LIGHT` (toggle backlight). Use `KEY_NONE` to explicitly disable a key.
 
 **Fn combination fallback:** if an Fn combination is not defined for a key, pressing Fn+key will simply produce the normal (non-Fn) action of that key.
 
